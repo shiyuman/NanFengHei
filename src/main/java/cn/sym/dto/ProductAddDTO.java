@@ -39,4 +39,9 @@ public class ProductAddDTO {
      * 库存数量
      */
     private Integer stock;
+
+    /**
+     * 上下架状态：1-上架，0-下架
+     */
+    private Integer status;
 }

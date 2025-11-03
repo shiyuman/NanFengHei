@@ -14,21 +14,21 @@ public class ProductPageQueryDTO {
      * 页码，默认为1
      */
     @Min(value = 1, message = "页码最小为1")
-    private Integer pageNo = 1;
+    private Integer page = 1;
 
     /**
      * 每页条数，默认为10
      */
     @Min(value = 1, message = "每页条数最小为1")
-    private Integer pageSize = 10;
+    private Integer size = 10;
 
     /**
-     * 搜索关键词
+     * 商品名称
      */
-    private String keyword;
+    private String name;
 
     /**
-     * 分类ID
+     * 商品状态
      */
-    private Long categoryId;
+    private Integer status;
 }

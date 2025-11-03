@@ -7,6 +7,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.FieldFill;
+
 
 /**
  * 商品信息实体类
@@ -65,24 +68,44 @@ public class ProductDO {
     /**
      * 创建人
      */
+    @TableField(fill = FieldFill.INSERT)
     @ApiModelProperty(value = "创建人")
     private String createBy;
 
     /**
      * 创建时间
      */
+    @TableField(fill = FieldFill.INSERT)
     @ApiModelProperty(value = "创建时间")
     private Date createTime;
 
     /**
      * 修改人
      */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     @ApiModelProperty(value = "修改人")
     private String updateBy;
 
     /**
      * 修改时间
      */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     @ApiModelProperty(value = "修改时间")
     private Date updateTime;
+    
+    /**
+     * 版本号，用于乐观锁
+     */
+    @Version
+    @TableField(fill = FieldFill.INSERT)
+    @ApiModelProperty(value = "版本号")
+    private Integer version;
+    
+    /**
+     * 逻辑删除标识，0-未删除，1-已删除
+     */
+    @TableLogic
+    @TableField(fill = FieldFill.INSERT)
+    @ApiModelProperty(value = "逻辑删除标识，0-未删除，1-已删除")
+    private Integer deleted;
 }

@@ -9,7 +9,6 @@ import cn.sym.dto.ProductStatusUpdateDTO;
 import cn.sym.dto.ProductUpdateDTO;
 import cn.sym.entity.ProductDO;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.IService;
 import java.util.List;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -18,7 +17,7 @@ import java.io.IOException;
  * 商品服务接口
  * @author user
  */
-public interface ProductService extends IService<ProductDO> {
+public interface ProductService {
 
     /**
      * 添加商品
@@ -78,47 +77,4 @@ public interface ProductService extends IService<ProductDO> {
      * @return 是否成功
      */
     Boolean importProducts(List<ProductDO> products);
-
-    /**
-     * 添加商品
-     *
-     * @param productDTO 商品信息
-     * @return 是否成功
-     */
-    Boolean addProduct(ProductDTO productDTO);
-
-    /**
-     * 删除商品
-     *
-     * @param productId 商品ID
-     * @return 是否成功
-     */
-    Boolean deleteProduct(Long productId);
-
-    /**
-     * 更新商品信息
-     *
-     * @param productDTO 商品信息
-     * @return 是否成功
-     */
-    Boolean updateProduct(ProductDTO productDTO);
-
-    /**
-     * 查询商品详情
-     *
-     * @param productQuery 查询参数
-     * @return 商品信息
-     */
-    ProductDO productInfo(ProductQuery productQuery);
-
-    /**
-     * 分页查询商品列表
-     *
-     * @param page 当前页数
-     * @param size 每页条数
-     * @param name 商品名称关键字
-     * @param status 上下架状态
-     * @return 商品分页结果
-     */
-    Page<ProductDO> listProducts(int page, int size, String name, Integer status);
 }
