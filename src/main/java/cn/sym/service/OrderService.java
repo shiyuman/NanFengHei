@@ -2,13 +2,12 @@ package cn.sym.service;
 
 import cn.sym.dto.CreateOrderDTO;
 import cn.sym.dto.OrderQueryDTO;
-import cn.sym.response.RestResult;
+import cn.sym.common.response.RestResult;
 import java.util.List;
 import cn.sym.entity.OrderDO;
 import cn.sym.dto.OrderExportQueryDTO;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import com.baomidou.mybatisplus.extension.service.IService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import cn.sym.dto.OrderQuery;
 import cn.sym.dto.OrderDTO;
@@ -91,12 +90,8 @@ public interface OrderService {
 
     /**
      * 分页查询订单列表
-     *
-     * @param page 当前页数
-     * @param size 每页条数
-     * @param userId 用户ID
-     * @param status 订单状态
+     * @param dto 订单查询
      * @return 订单分页结果
      */
-    Page<OrderDO> listOrders(int page, int size, Long userId, Integer status);
+    Page<OrderDO> listOrders(OrderQueryDTO dto);
 }

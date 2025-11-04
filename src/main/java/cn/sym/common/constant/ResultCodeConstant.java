@@ -32,9 +32,10 @@ public class ResultCodeConstant {
      */
     public static final String CODE_000005 = "000005";
 
+    public static final String CODE_000005_MSG ="订单编号已存在";
     public static final String CODE_999999 = "999999";
 
     public static final String CODE_999999_MSG = "系统异常";
 
-    public static final String CODE_000005_MSG = "参数校验失败";
+
 }

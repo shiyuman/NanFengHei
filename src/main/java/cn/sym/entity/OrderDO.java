@@ -57,24 +57,28 @@ public class OrderDO {
     /**
      * 创建人
      */
+    @TableField(fill = FieldFill.INSERT)
     @ApiModelProperty(value = "创建人")
     private String createBy;
 
     /**
      * 创建时间
      */
+    @TableField(fill = FieldFill.INSERT)
     @ApiModelProperty(value = "创建时间")
     private Date createTime;
 
     /**
      * 修改人
      */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     @ApiModelProperty(value = "修改人")
     private String updateBy;
 
     /**
      * 修改时间
      */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     @ApiModelProperty(value = "修改时间")
     private Date updateTime;
 }

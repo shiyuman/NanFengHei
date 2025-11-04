@@ -2,7 +2,7 @@ package cn.sym.controller;
 
 import cn.sym.dto.OperationLogDTO;
 import cn.sym.dto.OrderStatusChangeDTO;
-import cn.sym.response.RestResult;
+import cn.sym.common.response.RestResult;
 import cn.sym.service.MessageNotificationService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;

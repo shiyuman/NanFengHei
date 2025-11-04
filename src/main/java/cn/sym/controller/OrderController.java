@@ -7,7 +7,6 @@ import cn.sym.service.OrderService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import javax.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import javax.validation.groups.Default;
@@ -15,21 +14,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import cn.sym.entity.OrderDO;
 import lombok.RequiredArgsConstructor;
 import cn.sym.common.response.ResultCodeConstant;
-import cn.sym.dto.OrderQuery;
-import cn.sym.dto.OrderDTO;
-
-import cn.sym.service.OrderService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import javax.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
-import javax.validation.groups.Default;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import cn.sym.entity.OrderDO;
-import lombok.RequiredArgsConstructor;
-import cn.sym.utils.ResultCodeConstant;
 import cn.sym.dto.OrderQuery;
 import cn.sym.dto.OrderDTO;
 
@@ -136,17 +120,13 @@ public class OrderController {
 
     /**
      * 分页查询订单列表
-     *
-     * @param pageNo 页码
-     * @param pageSize 每页大小
-     * @param userId 用户ID
-     * @param status 订单状态
+     * @param dto 查询参数
      * @return RestResult 结果
      */
     @GetMapping("/list")
     @ApiOperation("分页查询订单列表")
-    public RestResult<Page<OrderDO>> listOrders(@RequestParam(defaultValue = "1") int pageNo, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) Long userId, @RequestParam(required = false) Integer status) {
-        Page<OrderDO> result = orderService.listOrders(pageNo, pageSize, userId, status);
+    public RestResult<Page<OrderDO>> listOrders(OrderQueryDTO dto) {
+        Page<OrderDO> result = orderService.listOrders(dto);
         return new RestResult<>(ResultCodeConstant.CODE_000000, ResultCodeConstant.CODE_000000_MSG, result);
     }
 }

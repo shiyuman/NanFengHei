@@ -1,12 +1,6 @@
 package cn.sym.service;
 
 import cn.sym.dto.*;
-import cn.sym.dto.ProductAddDTO;
-import cn.sym.dto.ProductDeleteDTO;
-import cn.sym.dto.ProductPageQueryDTO;
-import cn.sym.dto.ProductQueryDTO;
-import cn.sym.dto.ProductStatusUpdateDTO;
-import cn.sym.dto.ProductUpdateDTO;
 import cn.sym.entity.ProductDO;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import java.util.List;

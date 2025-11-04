@@ -2,7 +2,7 @@ package cn.sym.service;
 
 import cn.sym.dto.OperationLogDTO;
 import cn.sym.dto.OrderStatusChangeDTO;
-import cn.sym.response.RestResult;
+import cn.sym.common.response.RestResult;
 
 /**
  * 消息通知服务接口
