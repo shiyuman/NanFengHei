@@ -1,4 +1,3 @@
-
 CREATE TABLE order_info (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '订单唯一标识',
     user_id BIGINT NOT NULL COMMENT '下单用户ID',
@@ -9,5 +8,6 @@ CREATE TABLE order_info (
     create_by VARCHAR(50) COMMENT '创建人',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_by VARCHAR(50) COMMENT '修改人',
-    update_time DATETIME ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间'
+    update_time DATETIME ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
+    request_id VARCHAR(64) NOT NULL UNIQUE COMMENT '唯一请求ID，用于幂等性保障'
 ) COMMENT='订单信息表';

@@ -81,4 +81,10 @@ public class OrderDO {
     @TableField(fill = FieldFill.INSERT_UPDATE)
     @ApiModelProperty(value = "修改时间")
     private Date updateTime;
+    
+    /**
+     * 唯一请求ID，用于幂等性保障
+     */
+    @ApiModelProperty(value = "唯一请求ID，用于幂等性保障")
+    private String requestId;
 }

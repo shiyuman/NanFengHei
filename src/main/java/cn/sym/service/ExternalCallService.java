@@ -1,7 +1,7 @@
 package cn.sym.service;
 
 import cn.sym.dto.ExternalCallRequestDTO;
-import cn.sym.response.RestResult;
+import cn.sym.common.response.RestResult;
 
 /**
  * <p>

@@ -14,6 +14,13 @@ import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
+import org.apache.rocketmq.spring.core.RocketMQTemplate;
+import org.springframework.messaging.support.MessageBuilder;
+import org.apache.rocketmq.client.producer.SendCallback;
+import org.apache.rocketmq.client.producer.SendResult;
+import org.apache.rocketmq.client.producer.SendStatus;
+import org.springframework.messaging.Message;
+
 /**
  * 消息通知服务实现类
  *
@@ -27,6 +34,8 @@ public class MessageNotificationServiceImpl implements MessageNotificationServic
     private final OrderMapper orderMapper;
 
     private final UserMapper userMapper;
+
+    private final RocketMQTemplate rocketMQTemplate;
 
     @Override
     public RestResult<Boolean> sendOrderStatusChangeNotice(OrderStatusChangeDTO dto) {
@@ -45,11 +54,25 @@ public class MessageNotificationServiceImpl implements MessageNotificationServic
 
         // 异步发送消息到RocketMQ队列
         try {
-            // TODO: 实现异步发送到RocketMQ的逻辑
-            log.info("订单状态变更消息已投递至RocketMQ队列");
+            // 构建带标签的消息，根据订单状态设置不同标签
+            String destination = "order-status-change-topic:" + getStatusTag(dto.getStatus());
+            Message<OrderStatusChangeDTO> message = MessageBuilder.withPayload(dto)
+                    .setHeader("status", dto.getStatus())
+                    .setHeader("orderId", dto.getOrderId())
+                    .build();
+            
+            // 同步发送消息
+            SendResult sendResult = rocketMQTemplate.syncSend(destination, message);
+            
+            if (sendResult.getSendStatus() == SendStatus.SEND_OK) {
+                log.info("订单状态变更消息已成功投递至RocketMQ队列，消息ID: {}", sendResult.getMsgId());
+            } else {
+                log.warn("订单状态变更消息投递至RocketMQ队列失败，状态: {}", sendResult.getSendStatus());
+                throw new BusinessException(ResultCodeConstant.CODE_000002, "发送通知失败");
+            }
         } catch (Exception e) {
             log.error("发送订单状态变更通知失败", e);
-            throw new BusinessException(ResultCodeConstant.CODE_000002, "发送通知失败");
+            throw new BusinessException(ResultCodeConstant.CODE_000002, "发送通知失败: " + e.getMessage());
         }
 
         return new RestResult<>(ResultCodeConstant.CODE_000000, ResultCodeConstant.CODE_000000_MSG, true);
@@ -67,13 +90,78 @@ public class MessageNotificationServiceImpl implements MessageNotificationServic
 
         // 构建日志信息并异步投递到RocketMQ
         try {
-            // TODO: 实现构建日志信息并投递到RocketMQ的逻辑
-            log.info("操作日志已投递至RocketMQ队列");
+            // 构建带标签的消息，根据操作类型设置不同标签
+            String destination = "operation-log-topic:" + getOperationTag(dto.getOperationType());
+            Message<OperationLogDTO> message = MessageBuilder.withPayload(dto)
+                    .setHeader("operationType", dto.getOperationType())
+                    .setHeader("userId", dto.getUserId())
+                    .build();
+            
+            // 异步发送消息，带回调处理
+            rocketMQTemplate.asyncSend(destination, message, new SendCallback() {
+                @Override
+                public void onSuccess(SendResult sendResult) {
+                    log.info("操作日志已成功投递至RocketMQ队列，消息ID: {}", sendResult.getMsgId());
+                }
+
+                @Override
+                public void onException(Throwable throwable) {
+                    log.error("操作日志投递至RocketMQ队列失败", throwable);
+                }
+            }, 5000); // 5秒超时
+            
+            log.info("操作日志发送请求已提交");
         } catch (Exception e) {
             log.error("记录操作日志失败", e);
-            throw new BusinessException(ResultCodeConstant.CODE_000002, "记录日志失败");
+            throw new BusinessException(ResultCodeConstant.CODE_000002, "记录日志失败: " + e.getMessage());
         }
 
+        return new RestResult<>(ResultCodeConstant.CODE_000000, ResultCodeConstant.CODE_000000_MSG, true);
+    }
+    
+    /**
+     * 发送延迟消息示例 - 用于订单超时处理
+     * @param dto 订单状态变更DTO
+     * @param delayLevel 延迟级别 (1s 5s 10s 30s 1m 2m 3m 4m 5m 6m 7m 8m 9m 10m 20m 30m 1h 2h)
+     * @return
+     */
+    public RestResult<Boolean> sendDelayedOrderMessage(OrderStatusChangeDTO dto, int delayLevel) {
+        try {
+            Message<OrderStatusChangeDTO> message = MessageBuilder.withPayload(dto).build();
+            // 发送延迟消息
+            SendResult sendResult = rocketMQTemplate.syncSend("order-timeout-topic", message, 3000, delayLevel);
+            
+            if (sendResult.getSendStatus() == SendStatus.SEND_OK) {
+                log.info("延迟订单消息已成功投递至RocketMQ队列，消息ID: {}", sendResult.getMsgId());
+            } else {
+                log.warn("延迟订单消息投递至RocketMQ队列失败，状态: {}", sendResult.getSendStatus());
+            }
+        } catch (Exception e) {
+            log.error("发送延迟订单消息失败", e);
+        }
+        return new RestResult<>(ResultCodeConstant.CODE_000000, ResultCodeConstant.CODE_000000_MSG, true);
+    }
+    
+    /**
+     * 发送事务消息示例
+     * @param dto 订单状态变更DTO
+     * @return
+     */
+    public RestResult<Boolean> sendTransactionMessage(OrderStatusChangeDTO dto) {
+        try {
+            Message<OrderStatusChangeDTO> message = MessageBuilder.withPayload(dto).build();
+            // 发送事务消息
+            SendResult sendResult = rocketMQTemplate.sendMessageInTransaction("order-transaction-topic", 
+                    message, null);
+            
+            if (sendResult.getSendStatus() == SendStatus.SEND_OK) {
+                log.info("事务消息已成功投递至RocketMQ队列，消息ID: {}", sendResult.getMsgId());
+            } else {
+                log.warn("事务消息投递至RocketMQ队列失败，状态: {}", sendResult.getSendStatus());
+            }
+        } catch (Exception e) {
+            log.error("发送事务消息失败", e);
+        }
         return new RestResult<>(ResultCodeConstant.CODE_000000, ResultCodeConstant.CODE_000000_MSG, true);
     }
 
@@ -85,5 +173,35 @@ public class MessageNotificationServiceImpl implements MessageNotificationServic
      */
     private boolean isValidOrderStatus(Integer status) {
         return status != null && (status >= 1 && status <= 4);
+    }
+    
+    /**
+     * 根据订单状态获取标签
+     * @param status 订单状态
+     * @return 标签
+     */
+    private String getStatusTag(Integer status) {
+        switch (status) {
+            case 1: return "created";
+            case 2: return "paid";
+            case 3: return "shipped";
+            case 4: return "completed";
+            default: return "unknown";
+        }
+    }
+    
+    /**
+     * 根据操作类型获取标签
+     * @param operationType 操作类型
+     * @return 标签
+     */
+    private String getOperationTag(String operationType) {
+        switch (operationType) {
+            case "登录": return "login";
+            case "下单": return "order";
+            case "支付": return "payment";
+            case "退款": return "refund";
+            default: return "other";
+        }
     }
 }

@@ -36,7 +36,18 @@ external:
 mybatis:
   mapper-locations: classpath:mapper/*.xml
   type-aliases-package: cn.sym.entity
-
+rocketmq:
+  name-server: 127.0.0.1:9876
+  producer:
+    group: notification-producer-group
+    send-message-timeout: 3000
+    retry-times-when-send-failed: 2
+    retry-times-when-send-async-failed: 2
+    max-message-size: 4194304
+    compress-message-body-over-howmuch: 4096
+  consumer:
+    listeners: # 消费者监听器配置
+     enabled: true
 mybatis-plus:
   global-config:
     db-config:

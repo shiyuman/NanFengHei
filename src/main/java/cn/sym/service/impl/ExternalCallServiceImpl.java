@@ -3,11 +3,10 @@ package cn.sym.service.impl;
 import cn.sym.dto.ExternalCallRequestDTO;
 import cn.sym.entity.OrderInfo;
 import cn.sym.repository.OrderInfoRepository;
-import cn.sym.response.RestResult;
+import cn.sym.common.response.RestResult;
 import cn.sym.service.ExternalCallService;
 import cn.sym.utils.HttpClientUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -56,7 +55,9 @@ public class ExternalCallServiceImpl implements ExternalCallService {
             String responseJson = HttpClientUtil.post(paymentUrl, params);
 
             // 解析响应并返回结果
-            return objectMapper.readValue(responseJson, RestResult.class);
+            RestResult<Object> result = objectMapper.readValue(responseJson, 
+                objectMapper.getTypeFactory().constructParametricType(RestResult.class, Object.class));
+            return result;
         } catch (Exception e) {
             log.error("调用第三方支付接口异常:", e);
             return new RestResult<>("999999", "系统异常");
@@ -82,7 +83,9 @@ public class ExternalCallServiceImpl implements ExternalCallService {
             String responseJson = HttpClientUtil.get(fullUrl);
 
             // 解析响应并返回结果
-            return objectMapper.readValue(responseJson, RestResult.class);
+            RestResult<Object> result = objectMapper.readValue(responseJson,
+                objectMapper.getTypeFactory().constructParametricType(RestResult.class, Object.class));
+            return result;
         } catch (Exception e) {
             log.error("调用物流接口异常:", e);
             return new RestResult<>("999999", "系统异常");
