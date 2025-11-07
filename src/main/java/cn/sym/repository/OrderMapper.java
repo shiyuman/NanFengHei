@@ -20,4 +20,12 @@ public interface OrderMapper extends BaseMapper<OrderDO> {
      */
     @Select("SELECT * FROM order_info WHERE request_id = #{requestId}")
     OrderDO selectByRequestId(@Param("requestId") String requestId);
+    
+    /**
+     * 根据订单号查询订单
+     * @param orderNo 订单号
+     * @return 订单对象
+     */
+    @Select("SELECT * FROM order_info WHERE order_no = #{orderNo}")
+    OrderDO selectByOrderNo(@Param("orderNo") String orderNo);
 }

@@ -21,27 +21,6 @@ public interface ProductService {
     Boolean addProduct(ProductAddDTO productAddDTO);
 
     /**
-     * 更新商品
-     * @param productUpdateDTO 商品更新参数
-     * @return 是否更新成功
-     */
-    Boolean updateProduct(ProductUpdateDTO productUpdateDTO);
-
-    /**
-     * 删除商品
-     * @param productDeleteDTO 商品删除参数
-     * @return 是否删除成功
-     */
-    Boolean deleteProduct(ProductDeleteDTO productDeleteDTO);
-
-    /**
-     * 查询商品详情
-     * @param productQueryDTO 商品查询参数
-     * @return 商品信息
-     */
-    ProductDO getProductDetail(ProductQueryDTO productQueryDTO);
-
-    /**
      * 更新商品上下架状态
      * @param productStatusUpdateDTO 商品上下架参数
      * @return 是否更新成功
@@ -65,10 +44,53 @@ public interface ProductService {
     void exportProducts(ProductExportQueryDTO query, HttpServletResponse response) throws IOException;
 
     /**
+     * 导出商品信息（异步）
+     *
+     * @param query 查询条件
+     * @return 任务ID
+     */
+    String exportProductsAsync(ProductExportQueryDTO query);
+
+    /**
+     * 查询导出任务状态
+     *
+     * @param taskId 任务ID
+     * @return 任务状态
+     */
+    ProductExportTaskDTO getExportTaskStatus(String taskId);
+
+    /**
      * 导入商品信息
      *
      * @param products 商品列表
      * @return 是否成功
      */
     Boolean importProducts(List<ProductDO> products);
+
+    /**
+     * 查询商品详情（带缓存）
+     * @param productQueryDTO 商品查询参数
+     * @return 商品信息
+     */
+    ProductDO getProductDetailWithCache(ProductQueryDTO productQueryDTO);
+
+    /**
+     * 更新商品（清除缓存）
+     * @param productUpdateDTO 商品更新参数
+     * @return 是否更新成功
+     */
+    Boolean updateProductWithCache(ProductUpdateDTO productUpdateDTO);
+
+    /**
+     * 删除商品（清除缓存）
+     * @param productDeleteDTO 商品删除参数
+     * @return 是否删除成功
+     */
+    Boolean deleteProductWithCache(ProductDeleteDTO productDeleteDTO);
+
+    /**
+     * 预热商品缓存
+     * @param productId 商品ID
+     */
+    void warmUpProductCache(Long productId);
 }

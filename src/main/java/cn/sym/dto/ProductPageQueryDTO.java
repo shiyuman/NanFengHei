@@ -31,4 +31,19 @@ public class ProductPageQueryDTO {
      * 商品状态
      */
     private Integer status;
+    
+    /**
+     * 游标ID，用于游标分页优化
+     */
+    private Long cursorId;
+    
+    /**
+     * 排序字段
+     */
+    private String orderBy = "create_time";
+    
+    /**
+     * 排序方式：asc/desc
+     */
+    private String orderType = "desc";
 }

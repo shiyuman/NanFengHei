@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.annotation.*;
 import java.math.BigDecimal;
 import java.util.Date;
 import lombok.Data;
+import cn.sym.common.annotation.SensitiveData;
+import cn.sym.common.annotation.SensitiveType;
 
 /**
  * <p>
@@ -34,11 +36,13 @@ public class CouponDO {
     /**
      * 减免金额或折扣比例
      */
+    @SensitiveData(SensitiveType.AMOUNT)
     private BigDecimal discountAmount;
 
     /**
      * 最低消费金额
      */
+    @SensitiveData(SensitiveType.AMOUNT)
     private BigDecimal minAmount;
 
     /**

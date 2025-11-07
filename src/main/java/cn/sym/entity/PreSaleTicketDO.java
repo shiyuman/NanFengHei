@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.annotation.*;
 import java.math.BigDecimal;
 import java.util.Date;
 import lombok.Data;
+import cn.sym.common.annotation.SensitiveData;
+import cn.sym.common.annotation.SensitiveType;
 
 /**
  * 早鸟票预售配置实体类
@@ -38,6 +40,7 @@ public class PreSaleTicketDO {
     /**
      * 预售价格
      */
+    @SensitiveData(SensitiveType.PRICE)
     private BigDecimal prePrice;
 
     /**

@@ -20,7 +20,7 @@ public interface ProductMapper extends BaseMapper<ProductDO> {
      * @param status 状态 1-上架 0-下架
      * @return 商品对象
      */
-    @Select("SELECT * FROM product_info WHERE id = #{id} AND status = #{status} AND deleted = 0")
+    @Select("SELECT * FROM product_info WHERE id = #{id} AND status = #{status}")
     ProductDO findByIdAndStatus(@Param("id") Long id, @Param("status") Integer status);
     
     /**
@@ -30,7 +30,7 @@ public interface ProductMapper extends BaseMapper<ProductDO> {
      * @param version 版本号
      * @return 更新记录数
      */
-    @Update("UPDATE product_info SET stock = stock - #{quantity}, version = version + 1 WHERE id = #{id} AND stock >= #{quantity} AND version = #{version} AND deleted = 0")
+    @Update("UPDATE product_info SET stock = stock - #{quantity}, version = version + 1 WHERE id = #{id} AND stock >= #{quantity} AND version = #{version}")
     int deductStockWithVersion(@Param("id") Long id, @Param("quantity") Integer quantity, @Param("version") Integer version);
     
     /**
@@ -40,6 +40,14 @@ public interface ProductMapper extends BaseMapper<ProductDO> {
      * @param version 版本号
      * @return 更新记录数
      */
-    @Update("UPDATE product_info SET stock = stock + #{quantity}, version = version + 1 WHERE id = #{id} AND version = #{version} AND deleted = 0")
+    @Update("UPDATE product_info SET stock = stock + #{quantity}, version = version + 1 WHERE id = #{id} AND version = #{version}")
     int increaseStockWithVersion(@Param("id") Long id, @Param("quantity") Integer quantity, @Param("version") Integer version);
+    
+    /**
+     * 根据商品名称模糊查询商品列表（防止SQL注入）
+     * @param name 商品名称
+     * @return 商品列表数量
+     */
+    @Select("SELECT COUNT(*) FROM product_info WHERE name LIKE CONCAT('%', #{name}, '%')")
+    int countByNameContaining(@Param("name") String name);
 }

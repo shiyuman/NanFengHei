@@ -1,18 +1,13 @@
 package cn.sym.entity;
 
 import java.util.Date;
-import javax.persistence.*;
 import lombok.*;
-import org.apache.ibatis.type.Alias;
 import com.baomidou.mybatisplus.annotation.*;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 @NoArgsConstructor
 @AllArgsConstructor
-@Alias("UserDO")
-@Entity
-@Table(name = "user_info")
 @TableName("user_info")
 @Data
 @ApiModel(description = "用户信息实体类")
@@ -21,7 +16,7 @@ public class UserDO {
     /**
      * 用户ID
      */
-    @TableId(type = IdType.AUTO)
+    @TableId(value = "id", type = IdType.AUTO)
     @ApiModelProperty(value = "用户ID")
     private Long id;
 
@@ -72,4 +67,12 @@ public class UserDO {
      */
     @ApiModelProperty(value = "修改时间")
     private Date updateTime;
+    
+    /**
+     * 逻辑删除标识，0-未删除，1-已删除
+     */
+    @TableLogic
+    @TableField(fill = FieldFill.INSERT)
+    @ApiModelProperty(value = "逻辑删除标识，0-未删除，1-已删除")
+    private Integer deleted;
 }

@@ -9,6 +9,8 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.FieldFill;
+import cn.sym.common.annotation.SensitiveData;
+import cn.sym.common.annotation.SensitiveType;
 
 
 /**
@@ -51,6 +53,7 @@ public class ProductDO {
      * 单价
      */
     @ApiModelProperty(value = "单价")
+    @SensitiveData(SensitiveType.PRICE)
     private Integer price;
 
     /**

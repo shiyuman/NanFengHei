@@ -16,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import cn.sym.common.response.ResultCodeConstant;
 import cn.sym.dto.OrderQuery;
 import cn.sym.dto.OrderDTO;
+import cn.sym.common.annotation.Idempotent;
+import cn.sym.common.annotation.IdempotentKeyStrategy;
 
 /**
  * 订单控制器
@@ -39,6 +41,7 @@ public class OrderController {
      */
     @PostMapping("/create")
     @ApiOperation("创建订单")
+    @Idempotent(keyStrategy = IdempotentKeyStrategy.REQUEST_ID)
     public RestResult<String> createOrder(@RequestBody @Valid CreateOrderDTO createOrderDTO) {
         return orderService.createOrder(createOrderDTO);
     }

@@ -1,10 +1,9 @@
 package cn.sym.entity;
 
 import java.util.Date;
-import javax.persistence.*;
-import org.apache.ibatis.type.Alias;
 import lombok.*;
 import java.math.BigDecimal;
+import com.baomidou.mybatisplus.annotation.*;
 
 /**
  * 订单信息实体类
@@ -13,41 +12,37 @@ import java.math.BigDecimal;
  */
 @NoArgsConstructor
 @AllArgsConstructor
-@Alias("OrderInfo")
-@Entity
-@Table(name = "order_info")
 @Data
 public class OrderInfo {
 
     /**
      * 订单唯一标识
      */
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
     /**
      * 下单用户ID
      */
-    @Column(name = "user_id")
+    @TableField("user_id")
     private Long userId;
 
     /**
      * 订单编号
      */
-    @Column(name = "order_no")
+    @TableField("order_no")
     private String orderNo;
 
     /**
      * 订单总金额
      */
-    @Column(name = "total_amount")
+    @TableField("total_amount")
     private BigDecimal totalAmount;
 
     /**
      * 配送方式：1-自取，2-快递
      */
-    @Column(name = "delivery_type")
+    @TableField("delivery_type")
     private Integer deliveryType;
 
     /**
@@ -58,24 +53,24 @@ public class OrderInfo {
     /**
      * 创建人
      */
-    @Column(name = "create_by")
+    @TableField("create_by")
     private String createBy;
 
     /**
      * 创建时间
      */
-    @Column(name = "create_time")
+    @TableField("create_time")
     private Date createTime;
 
     /**
      * 修改人
      */
-    @Column(name = "update_by")
+    @TableField("update_by")
     private String updateBy;
 
     /**
      * 修改时间
      */
-    @Column(name = "update_time")
+    @TableField("update_time")
     private Date updateTime;
 }

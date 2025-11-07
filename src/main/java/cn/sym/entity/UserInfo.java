@@ -1,11 +1,8 @@
 package cn.sym.entity;
 
-import java.time.LocalDateTime;
-import javax.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import java.util.Date;
+import lombok.*;
+import com.baomidou.mybatisplus.annotation.*;
 
 /**
  * 用户实体类
@@ -14,16 +11,14 @@ import java.util.Date;
  */
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
-@Table(name = "user_info")
 @Data
+@TableName("user_info")
 public class UserInfo {
 
     /**
      * 主键ID
      */
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
     /**
@@ -49,24 +44,24 @@ public class UserInfo {
     /**
      * 创建人
      */
-    @Column(name = "create_by")
+    @TableField("create_by")
     private String createBy;
 
     /**
      * 创建时间
      */
-    @Column(name = "create_time")
+    @TableField("create_time")
     private Date createTime;
 
     /**
      * 修改人
      */
-    @Column(name = "update_by")
+    @TableField("update_by")
     private String updateBy;
 
     /**
      * 修改时间
      */
-    @Column(name = "update_time")
+    @TableField("update_time")
     private Date updateTime;
 }

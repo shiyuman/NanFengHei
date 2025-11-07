@@ -1,30 +1,26 @@
 package cn.sym.entity;
 
 import java.util.Date;
-import javax.persistence.*;
 import lombok.*;
-import org.apache.ibatis.type.Alias;
+import com.baomidou.mybatisplus.annotation.*;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Alias("ChatMessage")
-@Entity
-@Table(name = "chat_message")
+@TableName("chat_message")
 public class ChatMessage {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    @Column(nullable = false)
+    @TableField("from_user_id")
     private Long fromUserId;
 
-    @Column(nullable = false)
+    @TableField("to_user_id")
     private Long toUserId;
 
-    @Column(nullable = false)
+    @TableField("content")
     private String content;
 
-    @Temporal(TemporalType.TIMESTAMP)
+    @TableField("create_time")
     private Date createTime;
 }
