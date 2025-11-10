@@ -14,7 +14,6 @@ public class DynamicRoutingDataSource extends AbstractRoutingDataSource {
         if (DataSourceUtil.isForceMaster()) {
             return DataSourceContextHolder.MASTER;
         }
-
         return DataSourceContextHolder.getDataSourceType();
     }
 }
