@@ -4,7 +4,7 @@ import cn.sym.dto.FileDeleteDTO;
 import cn.sym.dto.FileQueryDTO;
 import cn.sym.dto.FileUploadDTO;
 import cn.sym.entity.FileDO;
-import cn.sym.response.RestResult;
+import cn.sym.common.response.RestResult;
 
 /**
  * 文件管理服务接口

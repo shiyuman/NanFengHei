@@ -4,7 +4,7 @@ import cn.sym.dto.LimitPurchaseAddDTO;
 import cn.sym.dto.LimitPurchaseEditDTO;
 import cn.sym.dto.LimitPurchaseQueryDTO;
 import cn.sym.entity.LimitPurchaseDO;
-import cn.sym.response.RestResult;
+import cn.sym.common.response.RestResult;
 
 /**
  * 限购配置服务接口

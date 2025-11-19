@@ -4,7 +4,7 @@ import cn.sym.dto.PreSaleTicketAddDTO;
 import cn.sym.dto.PreSaleTicketEditDTO;
 import cn.sym.dto.PreSaleTicketQueryDTO;
 import cn.sym.entity.PreSaleTicketDO;
-import cn.sym.response.RestResult;
+import cn.sym.common.response.RestResult;
 
 /**
  * 早鸟票预售配置服务接口

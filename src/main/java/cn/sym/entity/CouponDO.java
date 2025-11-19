@@ -13,7 +13,7 @@ import cn.sym.common.annotation.SensitiveType;
  * </p>
  * @author user
  */
-@Data
+@Data  // Lombok注解，自动生成getter/setter方法
 @TableName("coupon_info")
 public class CouponDO {
 
@@ -63,20 +63,31 @@ public class CouponDO {
     /**
      * 创建人
      */
+    @TableField(fill = FieldFill.INSERT)
     private String createBy;
 
     /**
      * 创建时间
      */
+    @TableField(fill = FieldFill.INSERT)
     private Date createTime;
 
     /**
      * 修改人
      */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private String updateBy;
 
     /**
      * 修改时间
      */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private Date updateTime;
+
+    /**
+     * 逻辑删除标识，0-未删除，1-已删除
+     */
+    @TableLogic
+    @TableField(fill = FieldFill.INSERT)
+    private Integer deleted;
 }

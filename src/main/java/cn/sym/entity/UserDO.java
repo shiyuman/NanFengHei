@@ -3,69 +3,61 @@ package cn.sym.entity;
 import java.util.Date;
 import lombok.*;
 import com.baomidou.mybatisplus.annotation.*;
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
 
 @NoArgsConstructor
 @AllArgsConstructor
 @TableName("user_info")
 @Data
-@ApiModel(description = "用户信息实体类")
 public class UserDO {
 
     /**
      * 用户ID
      */
     @TableId(value = "id", type = IdType.AUTO)
-    @ApiModelProperty(value = "用户ID")
     private Long id;
 
     /**
      * 用户名
      */
-    @ApiModelProperty(value = "用户名")
     private String username;
 
     /**
      * 密码（加密后）
      */
-    @ApiModelProperty(value = "密码（加密后）")
     private String password;
 
     /**
      * 手机号码
      */
-    @ApiModelProperty(value = "手机号码")
     private String phone;
 
     /**
      * 账户状态：1-正常，0-禁用
      */
-    @ApiModelProperty(value = "账户状态：1-正常，0-禁用")
     private Integer status;
 
     /**
      * 创建人
      */
-    @ApiModelProperty(value = "创建人")
+    @TableField(fill = FieldFill.INSERT)
     private String createBy;
 
     /**
      * 创建时间
      */
-    @ApiModelProperty(value = "创建时间")
+    @TableField(fill = FieldFill.INSERT)
     private Date createTime;
 
     /**
      * 修改人
      */
-    @ApiModelProperty(value = "修改人")
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private String updateBy;
 
     /**
      * 修改时间
      */
-    @ApiModelProperty(value = "修改时间")
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private Date updateTime;
     
     /**
@@ -73,6 +65,5 @@ public class UserDO {
      */
     @TableLogic
     @TableField(fill = FieldFill.INSERT)
-    @ApiModelProperty(value = "逻辑删除标识，0-未删除，1-已删除")
     private Integer deleted;
 }

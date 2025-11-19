@@ -29,4 +29,40 @@ public class MyMetaObjectHandler implements MetaObjectHandler {
         this.strictUpdateFill(metaObject, "updateBy", String.class, "system");
 
     }
+
+    /**
+     * 获取当前用户 - 多种安全框架支持
+     */
+//    private String getCurrentUsername() {
+//        // 优先级1: Spring Security
+//        try {
+//            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+//            if (principal instanceof UserDetails) {
+//                return ((UserDetails) principal).getUsername();
+//            } else if (principal instanceof String && !"anonymousUser".equals(principal)) {
+//                return (String) principal;
+//            }
+//        } catch (Exception e) {
+//            log.trace("Spring Security上下文获取失败");
+//        }
+//
+//        // 优先级2: 从请求头或ThreadLocal中获取
+//        try {
+//            // 如果你有自定义的用户上下文
+//            // return UserContextHolder.getUserName();
+//        } catch (Exception e) {
+//            log.trace("自定义用户上下文获取失败");
+//        }
+//
+//        // 优先级3: 从JWT Token中解析
+//        try {
+//            // 如果你使用JWT，可以从请求头中解析
+//            // return JwtUtil.getUsernameFromToken();
+//        } catch (Exception e) {
+//            log.trace("JWT解析失败");
+//        }
+//
+//        // 默认值
+//        return "unknown";
+//    }
 }

@@ -6,8 +6,6 @@ import cn.sym.common.response.RestResult;
 import cn.sym.dto.UserLoginDTO;
 import cn.sym.dto.UserRegisterDTO;
 import cn.sym.service.UserService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
 import java.util.HashMap;
 import java.util.Map;
 import javax.validation.Valid;
@@ -29,7 +27,6 @@ import cn.sym.dto.UserQuery;
 @Slf4j
 @RequiredArgsConstructor
 @RestController
-@Api(tags = "用户管理")
 @RequestMapping("/user")
 public class UserController {
 
@@ -42,7 +39,6 @@ public class UserController {
      * @return 结果
      */
     @PostMapping("/register")
-    @ApiOperation("用户注册")
     public RestResult<Map<String,Object>> register(@Valid @RequestBody UserRegisterDTO registerDTO) {
         try {
             //注册，成功就会给用户分配ID
@@ -71,7 +67,6 @@ public class UserController {
      * @return 结果
      */
     @PostMapping("/login")
-    @ApiOperation("用户登录")
     public RestResult<Map<String, Object>> login(@Valid @RequestBody UserLoginDTO loginDTO) {
         try {
             String token = userService.login(loginDTO);
@@ -94,7 +89,6 @@ public class UserController {
      * @return RestResult 结果
      */
     @PostMapping("/add")
-    @ApiOperation("新增用户")
     public RestResult<Boolean> addUser(@RequestBody @Validated({ Default.class }) UserDTO userDTO) {
         Boolean result = userService.addUser(userDTO);
         return new RestResult<>(ResultCodeConstant.CODE_000000, ResultCodeConstant.CODE_000000_MSG, result);
@@ -107,7 +101,6 @@ public class UserController {
      * @return RestResult 结果
      */
     @DeleteMapping("/delete/{userId}")
-    @ApiOperation("删除用户")
     public RestResult<Boolean> deleteUser(@PathVariable Long userId) {
         Boolean result = userService.deleteUser(userId);
         return new RestResult<>(ResultCodeConstant.CODE_000000, ResultCodeConstant.CODE_000000_MSG, result);
@@ -120,7 +113,6 @@ public class UserController {
      * @return RestResult 结果
      */
     @PutMapping("/update")
-    @ApiOperation("更新用户")
     public RestResult<Boolean> updateUser(@RequestBody @Validated({ Default.class }) UserDTO userDTO) {
         Boolean result = userService.updateUser(userDTO);
         return new RestResult<>(ResultCodeConstant.CODE_000000, ResultCodeConstant.CODE_000000_MSG, result);
@@ -133,7 +125,6 @@ public class UserController {
      * @return RestResult 结果
      */
     @GetMapping("/info")
-    @ApiOperation("查询用户详情")
     public RestResult<UserDO> userInfo(@Validated({ Default.class }) UserQuery userQuery) {
         UserDO result = userService.userInfo(userQuery);
         return new RestResult<>(ResultCodeConstant.CODE_000000, ResultCodeConstant.CODE_000000_MSG, result);
@@ -148,7 +139,6 @@ public class UserController {
      * @return RestResult 结果
      */
     @GetMapping("/list")
-    @ApiOperation("分页查询用户列表")
     public RestResult<Page<UserDO>> listUsers(@RequestParam(defaultValue = "1") int pageNo, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String username) {
         Page<UserDO> result = userService.listUsers(pageNo, pageSize, username);
         return new RestResult<>(ResultCodeConstant.CODE_000000, ResultCodeConstant.CODE_000000_MSG, result);
