@@ -9,7 +9,7 @@ import cn.sym.utils.JwtUtil;
 import cn.sym.utils.PasswordEncoderUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import javax.servlet.http.HttpServletResponse;
 import java.text.SimpleDateFormat;
 import java.io.IOException;
@@ -23,9 +23,10 @@ import cn.sym.entity.UserDO;
 import cn.sym.repository.UserMapper;
 import org.springframework.transaction.annotation.Transactional;
 import cn.sym.dto.UserDTO;
-import java.util.Date;
 import lombok.RequiredArgsConstructor;
 import cn.sym.dto.UserQuery;
+import cn.sym.common.response.RestResult;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 /**
  * 用户服务实现类
@@ -35,7 +36,7 @@ import cn.sym.dto.UserQuery;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class UserServiceImpl implements UserService {
+public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements UserService {
 
     private final PasswordEncoderUtil passwordEncoderUtil;
 
@@ -44,11 +45,13 @@ public class UserServiceImpl implements UserService {
     private final JwtUtil jwtUtil;
 
     @Override
-    public boolean register(UserRegisterDTO registerDTO) throws BusinessException {
-        // 检查用户名是否已经存在
-        UserDO existingUser = userMapper.selectOne(new QueryWrapper<UserDO>().eq("username", registerDTO.getUsername()));
+    public boolean register(UserRegisterDTO registerDTO) {
+        // 检查用户名是否已存在
+        LambdaQueryWrapper<UserDO> userQueryWrapper = new LambdaQueryWrapper<>();
+        userQueryWrapper.eq(UserDO::getUsername, registerDTO.getUsername());
+        UserDO existingUser = userMapper.selectOne(userQueryWrapper);
         if (existingUser != null) {
-            throw new BusinessException(ResultCodeConstant.CODE_000001, ResultCodeConstant.CODE_000001_MSG);
+            return false;
         }
         // 加密密码
         String encodedPassword = passwordEncoderUtil.encode(registerDTO.getPassword());
@@ -59,30 +62,28 @@ public class UserServiceImpl implements UserService {
         userDO.setPhone(registerDTO.getPhone());
         // 默认启用状态
         userDO.setStatus(1);
-        userDO.setCreateBy("system");
-        userDO.setCreateTime(new Date());
-        userDO.setUpdateBy("system");
-        userDO.setUpdateTime(new Date());
         // 保存到数据库
         try {
-            int result = userMapper.insert(userDO);
-            if (result > 0) {
+            boolean result = this.save(userDO);
+            if (result) {
                 log.info("用户注册成功，用户名: {}", userDO.getUsername());
                 return true;
             } else {
                 log.error("用户注册失败，用户名: {}", userDO.getUsername());
-                throw new BusinessException(ResultCodeConstant.CODE_000004, ResultCodeConstant.CODE_000004_MSG);
+                return false;
             }
         } catch (Exception e) {
             log.error("用户注册失败，用户名: {}", userDO.getUsername(), e);
-            throw new BusinessException(ResultCodeConstant.CODE_000004, ResultCodeConstant.CODE_000004_MSG);
+            return false;
         }
     }
 
     @Override
     public String login(UserLoginDTO loginDTO) throws BusinessException {
         // 查找用户
-        UserDO userDO = userMapper.selectOne(new QueryWrapper<UserDO>().eq("username", loginDTO.getUsername()));
+        LambdaQueryWrapper<UserDO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserDO::getUsername, loginDTO.getUsername());
+        UserDO userDO = userMapper.selectOne(wrapper);
         if (userDO == null) {
             throw new BusinessException(ResultCodeConstant.CODE_000002, ResultCodeConstant.CODE_000002_MSG);
         }
@@ -98,24 +99,26 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDO findUserByUsername(String username) {
-        return userMapper.selectOne(new QueryWrapper<UserDO>().eq("username", username));
+        LambdaQueryWrapper<UserDO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserDO::getUsername, username);
+        return userMapper.selectOne(wrapper);
     }
 
     @Override
     public void exportUsers(UserExportQueryDTO query, HttpServletResponse response) throws IOException {
         // 构建查询条件
-        QueryWrapper<UserDO> wrapper = new QueryWrapper<>();
+        LambdaQueryWrapper<UserDO> wrapper = new LambdaQueryWrapper<>();
         if (query.getUsername() != null && !query.getUsername().isEmpty()) {
-            wrapper.like("username", query.getUsername());
+            wrapper.like(UserDO::getUsername, query.getUsername());
         }
         if (query.getPhone() != null && !query.getPhone().isEmpty()) {
-            wrapper.like("phone", query.getPhone());
+            wrapper.like(UserDO::getPhone, query.getPhone());
         }
         if (query.getStartTime() != null) {
-            wrapper.ge("create_time", query.getStartTime());
+            wrapper.ge(UserDO::getCreateTime, query.getStartTime());
         }
         if (query.getEndTime() != null) {
-            wrapper.le("create_time", query.getEndTime());
+            wrapper.le(UserDO::getCreateTime, query.getEndTime());
         }
         // 获取所有匹配的用户
         List<UserDO> userList = userMapper.selectList(wrapper);
@@ -183,7 +186,9 @@ public class UserServiceImpl implements UserService {
     @Override
     public Boolean addUser(UserDTO userDTO) {
         // 校验用户名是否已存在
-        UserDO existingUser = userMapper.selectByUsername(userDTO.getUsername());
+        LambdaQueryWrapper<UserDO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserDO::getUsername, userDTO.getUsername());
+        UserDO existingUser = userMapper.selectOne(wrapper);
         if (existingUser != null) {
             throw new BusinessException(ResultCodeConstant.CODE_000001, ResultCodeConstant.CODE_000001_MSG);
         }
@@ -193,28 +198,24 @@ public class UserServiceImpl implements UserService {
         userDO.setPassword(userDTO.getPassword());
         userDO.setPhone(userDTO.getPhone());
         userDO.setStatus(userDTO.getStatus());
-        userDO.setCreateBy("system");
-        userDO.setCreateTime(new Date());
-        userDO.setUpdateBy("system");
-        userDO.setUpdateTime(new Date());
-        return userMapper.insert(userDO) > 0;
+        return this.save(userDO);
     }
 
     @Override
     public Boolean deleteUser(Long userId) {
         // 检查用户是否存在
-        UserDO userDO = userMapper.selectById(userId);
+        UserDO userDO = this.getById(userId);
         if (userDO == null) {
             throw new BusinessException(ResultCodeConstant.CODE_000001, ResultCodeConstant.CODE_000001_MSG);
         }
         // 删除用户
-        return userMapper.deleteById(userId) > 0;
+        return this.removeById(userId);
     }
 
     @Override
     public Boolean updateUser(UserDTO userDTO) {
         // 验证用户是否存在
-        UserDO userDO = userMapper.selectById(userDTO.getUserId());
+        UserDO userDO = this.getById(userDTO.getUserId());
         if (userDO == null) {
             throw new BusinessException(ResultCodeConstant.CODE_000001, ResultCodeConstant.CODE_000001_MSG);
         }
@@ -223,14 +224,12 @@ public class UserServiceImpl implements UserService {
         userDO.setPassword(userDTO.getPassword());
         userDO.setPhone(userDTO.getPhone());
         userDO.setStatus(userDTO.getStatus());
-        userDO.setUpdateBy("system");
-        userDO.setUpdateTime(new Date());
-        return userMapper.updateById(userDO) > 0;
+        return this.updateById(userDO);
     }
 
     @Override
     public UserDO userInfo(UserQuery userQuery) {
-        UserDO userDO = userMapper.selectById(userQuery.getUserId());
+        UserDO userDO = this.getById(userQuery.getUserId());
         if (userDO == null) {
             throw new BusinessException(ResultCodeConstant.CODE_000001, ResultCodeConstant.CODE_000001_MSG);
         }
@@ -240,9 +239,9 @@ public class UserServiceImpl implements UserService {
     @Override
     public Page<UserDO> listUsers(int page, int size, String username) {
         Page<UserDO> userPage = new Page<>(page, size);
-        QueryWrapper<UserDO> wrapper = new QueryWrapper<>();
+        LambdaQueryWrapper<UserDO> wrapper = new LambdaQueryWrapper<>();
         if (username != null && !username.isEmpty()) {
-            wrapper.like("username", username);
+            wrapper.like(UserDO::getUsername, username);
         }
         userMapper.selectPage(userPage, wrapper);
         return userPage;

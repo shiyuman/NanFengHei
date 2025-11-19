@@ -25,27 +25,12 @@ public class MultiLevelCacheConfig {
     @Bean("localCache")
     public Cache<String, Object> localCache() {
         return Caffeine.newBuilder()
-                // 设置过期时间
                 .expireAfterWrite(10, TimeUnit.MINUTES)
                 // 设置缓存最大条数
                 .maximumSize(1000)
                 // 设置缓存弱引用
                 .weakValues()
                 .build();
-    }
-
-    /**
-     * Caffeine缓存管理器
-     * @return CacheManager
-     */
-    @Bean("caffeineCacheManager")
-    public CacheManager caffeineCacheManager() {
-        CaffeineCacheManager cacheManager = new CaffeineCacheManager();
-        cacheManager.setCaffeine(Caffeine.newBuilder()
-                .expireAfterWrite(30, TimeUnit.MINUTES)
-                .maximumSize(5000)
-                .weakValues());
-        return cacheManager;
     }
 
     /**

@@ -18,6 +18,7 @@ import java.util.*;
 
 import cn.sym.utils.DataSourceUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import org.springframework.beans.BeanUtils;
 import org.springframework.http.ContentDisposition;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -38,14 +39,12 @@ import cn.sym.dto.OrderQuery;
 import cn.sym.dto.OrderDTO;
 import java.util.concurrent.atomic.AtomicReference;
 
-// 添加RocketMQ相关导入
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
 import org.apache.rocketmq.spring.core.RocketMQListener;
 import org.springframework.messaging.support.MessageBuilder;
 import cn.sym.dto.StockDeductionMessage;
 
-// 添加定时任务相关导入
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -56,6 +55,13 @@ import cn.sym.repository.OrderItemMapper;
 // 添加读写分离相关导入
 import cn.sym.config.DataSource;
 import cn.sym.config.DataSourceContextHolder;
+
+import cn.sym.entity.LimitPurchaseDO;
+import cn.sym.dto.LimitPurchaseQueryDTO;
+import cn.sym.service.LimitPurchaseService;
+
+import cn.sym.entity.PreSaleTicketDO;
+import cn.sym.service.PreSaleTicketService;
 
 /**
  * 订单服务实现类
@@ -74,6 +80,8 @@ public class OrderServiceImpl implements OrderService, RocketMQListener<StockDed
     private final ProductMapper productMapper;
     private final RocketMQTemplate rocketMQTemplate;
     private final OrderItemMapper orderItemMapper;
+    private final LimitPurchaseService limitPurchaseService;
+    private final PreSaleTicketService preSaleTicketService;
 
     /**
      * 创建订单
@@ -107,11 +115,9 @@ public class OrderServiceImpl implements OrderService, RocketMQListener<StockDed
             
             // 构建订单对象
             OrderDO orderDO = new OrderDO();
-            orderDO.setUserId(createOrderDTO.getUserId());
+            BeanUtils.copyProperties(createOrderDTO,orderDO);
             orderDO.setOrderNo(orderNo);
-            orderDO.setDeliveryType(createOrderDTO.getDeliveryType());
             orderDO.setStatus(1); // 待支付状态
-            orderDO.setRequestId(createOrderDTO.getRequestId()); // 设置请求ID用于幂等性检查
             
             // 创建一个线程安全的引用变量totalAmount，用于累计订单总金额，初始值为0。使用AtomicReference是因为在lambda表达式中需要修改这个变量
             AtomicReference<BigDecimal> totalAmount = new AtomicReference<>(BigDecimal.ZERO);
@@ -130,6 +136,12 @@ public class OrderServiceImpl implements OrderService, RocketMQListener<StockDed
                     return new RestResult<>(ResultCodeConstant.CODE_000001, "商品[" + item.getProductId() + "]库存不足");
                 }
                 
+                // 检查限购
+                RestResult<LimitPurchaseDO> limitResult = checkLimitPurchase(createOrderDTO.getUserId(), item.getProductId(), item.getQuantity());
+                if (!ResultCodeConstant.CODE_000000.equals(limitResult.getCode())) {
+                    return new RestResult<>(limitResult.getCode(), limitResult.getMsg());
+                }
+                
                 /*计算并累计订单总金额：
                     product.getPrice() - 获取商品单价
                     item.getQuantity() - 获取该商品的购买数量
@@ -139,10 +151,11 @@ public class OrderServiceImpl implements OrderService, RocketMQListener<StockDed
                     add() - 将该商品小计加到累计金额上
                     totalAmount.set() - 更新累计金额
                 * */
+                // 检查是否有有效的早鸟票价格
+                BigDecimal unitPrice = checkPreSaleTicketPrice(item.getProductId(), BigDecimal.valueOf(product.getPrice()));
                 totalAmount.set(totalAmount.get()
                         .add(
-                                BigDecimal.valueOf(product.getPrice())
-                                        .multiply(
+                                unitPrice.multiply(
                                                 BigDecimal.valueOf(item.getQuantity())
                                         )
                         )
@@ -164,12 +177,13 @@ public class OrderServiceImpl implements OrderService, RocketMQListener<StockDed
             for (OrderProductDTO item : createOrderDTO.getProductList()) {
                 ProductDO product = productMapper.findByIdAndStatus(item.getProductId(), 1);
                 
+                // 获取商品单价（考虑早鸟票价格）
+                BigDecimal unitPrice = checkPreSaleTicketPrice(item.getProductId(), BigDecimal.valueOf(product.getPrice()));
+                
                 OrderItemDO orderItem = new OrderItemDO();
-                orderItem.setOrderId(orderDO.getId());
-                orderItem.setProductId(item.getProductId());
+                BeanUtils.copyProperties(orderDO,orderItem);
                 orderItem.setProductName(product.getName());
-                orderItem.setPrice(BigDecimal.valueOf(product.getPrice()));
-                orderItem.setQuantity(item.getQuantity());
+                orderItem.setPrice(unitPrice);
                 orderItem.setSubtotalAmount(orderItem.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
                 
                 int itemInsertResult = orderItemMapper.insert(orderItem);
@@ -182,11 +196,8 @@ public class OrderServiceImpl implements OrderService, RocketMQListener<StockDed
             
             // 发送库存扣减消息到RocketMQ，实现最终一致性
             StockDeductionMessage stockDeductionMessage = new StockDeductionMessage();
+            BeanUtils.copyProperties(orderDO,stockDeductionMessage);
             stockDeductionMessage.setOrderId(orderDO.getId());
-            stockDeductionMessage.setOrderNo(orderDO.getOrderNo());
-            stockDeductionMessage.setUserId(orderDO.getUserId());
-            stockDeductionMessage.setProductList(createOrderDTO.getProductList());
-            stockDeductionMessage.setTotalAmount(orderDO.getTotalAmount());
             
             // 发送消息到RocketMQ
             rocketMQTemplate.sendOneWay("STOCK_DEDUCTION_TOPIC", 
@@ -335,51 +346,41 @@ public class OrderServiceImpl implements OrderService, RocketMQListener<StockDed
     @Override
     @DataSource(DataSourceContextHolder.SLAVE)
     public void exportOrders(OrderExportQueryDTO query, HttpServletResponse response) throws IOException {
-        // 构建查询条件
         LambdaQueryWrapper<OrderDO> wrapper = new LambdaQueryWrapper<>();
-        if (query.getOrderNo() != null && !query.getOrderNo().isEmpty()) {
-            wrapper.like(OrderDO::getOrderNo, query.getOrderNo());
-        }
-        if (query.getUserId() != null) {
-            wrapper.eq(OrderDO::getUserId, query.getUserId());
-        }
-        if (query.getDeliveryType() != null) {
-            wrapper.eq(OrderDO::getDeliveryType, query.getDeliveryType());
-        }
-        if (query.getStatus() != null) {
-            wrapper.eq(OrderDO::getStatus, query.getStatus());
-        }
-        if (query.getStartTime() != null) {
-            wrapper.ge(OrderDO::getCreateTime, query.getStartTime());
-        }
-        if (query.getEndTime() != null) {
-            wrapper.le(OrderDO::getUpdateTime, query.getEndTime());
-        }
+        wrapper.like(query.getOrderNo() != null && !query.getOrderNo().isEmpty(), OrderDO::getOrderNo, query.getOrderNo())
+               .eq(query.getUserId() != null, OrderDO::getUserId, query.getUserId())
+               .eq(query.getDeliveryType() != null, OrderDO::getDeliveryType, query.getDeliveryType())
+               .eq(query.getStatus() != null, OrderDO::getStatus, query.getStatus())
+               .ge(query.getStartTime() != null, OrderDO::getCreateTime, query.getStartTime())
+               .le(query.getEndTime() != null, OrderDO::getUpdateTime, query.getEndTime());
         
         List<OrderDO> orderList = orderMapper.selectList(wrapper);
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("订单数据");
         // 设置列标题行
         Row headerRow = sheet.createRow(0);
-        headerRow.createCell(0).setCellValue("订单ID");
-        headerRow.createCell(1).setCellValue("用户ID");
-        headerRow.createCell(2).setCellValue("订单编号");
-        headerRow.createCell(3).setCellValue("订单总金额");
-        headerRow.createCell(4).setCellValue("配送方式");
-        headerRow.createCell(5).setCellValue("订单状态");
-        headerRow.createCell(6).setCellValue("创建时间");
+        String[] headers = {"订单ID", "用户ID", "订单编号", "订单总金额", "配送方式", "订单状态", "创建时间"};
+        for (int i = 0; i < headers.length; i++) {
+            headerRow.createCell(i).setCellValue(headers[i]);
+        }
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         // 填充数据
         int rowNum = 1;
         for (OrderDO order : orderList) {
             Row row = sheet.createRow(rowNum++);
-            row.createCell(0).setCellValue(order.getId());
-            row.createCell(1).setCellValue(order.getUserId());
-            row.createCell(2).setCellValue(order.getOrderNo());
-            row.createCell(3).setCellValue(order.getTotalAmount().toString());
-            row.createCell(4).setCellValue(order.getDeliveryType() == 1 ? "自取" : "快递");
-            row.createCell(5).setCellValue(getStatusText(order.getStatus()));
-            row.createCell(6).setCellValue(sdf.format(order.getCreateTime()));
+            Object[] rowData = {
+                order.getId(),
+                order.getUserId(),
+                order.getOrderNo(),
+                order.getTotalAmount().toString(),
+                order.getDeliveryType() == 1 ? "自取" : "快递",
+                getStatusText(order.getStatus()),
+                sdf.format(order.getCreateTime())
+            };
+            
+            for (int i = 0; i < rowData.length; i++) {
+                row.createCell(i).setCellValue(rowData[i].toString());
+            }
         }
         // 自动调整列宽
         for (int i = 0; i < 7; i++) {
@@ -431,15 +432,17 @@ public class OrderServiceImpl implements OrderService, RocketMQListener<StockDed
         try {
             for (OrderDO order : orders) {
                 // 校验必要字段
-                if (order.getOrderNo() == null || order.getOrderNo().trim().isEmpty()) {
-                    throw new BusinessException(ResultCodeConstant.CODE_000001, "订单编号不能为空");
-                }
-                if (order.getUserId() == null) {
-                    throw new BusinessException(ResultCodeConstant.CODE_000001, "用户ID不能为空");
-                }
-                if (order.getTotalAmount() == null) {
-                    throw new BusinessException(ResultCodeConstant.CODE_000001, "订单总金额不能为空");
-                }
+                Map<String, Object> requiredFields = new HashMap<>();
+                requiredFields.put("订单编号", order.getOrderNo());
+                requiredFields.put("用户ID", order.getUserId());
+                requiredFields.put("订单总金额", order.getTotalAmount());
+                
+                requiredFields.forEach((fieldName, fieldValue) -> {
+                    if (fieldValue == null || (fieldValue instanceof String && ((String) fieldValue).trim().isEmpty())) {
+                        throw new BusinessException(ResultCodeConstant.CODE_000001, fieldName + "不能为空");
+                    }
+                });
+                
                 // 检查订单编号是否已存在
                 if (orderMapper.selectById(order.getOrderNo()) != null) {
                     throw new BusinessException(ResultCodeConstant.CODE_000001, "订单编号已存在: " + order.getOrderNo());
@@ -464,10 +467,7 @@ public class OrderServiceImpl implements OrderService, RocketMQListener<StockDed
         }
         // 插入新订单
         OrderDO orderDO = new OrderDO();
-        orderDO.setUserId(orderDTO.getUserId());
-        orderDO.setOrderNo(orderDTO.getOrderNo());
-        orderDO.setTotalAmount(orderDTO.getTotalAmount());
-        orderDO.setDeliveryType(orderDTO.getDeliveryType());
+        BeanUtils.copyProperties(orderDTO,orderDO);
         // 默认为待支付状态
         orderDO.setStatus(1);
         return orderMapper.insert(orderDO) >0;
@@ -624,11 +624,9 @@ public class OrderServiceImpl implements OrderService, RocketMQListener<StockDed
             
             // 构造库存扣减消息并重新发送
             StockDeductionMessage stockDeductionMessage = new StockDeductionMessage();
+            BeanUtils.copyProperties(order,stockDeductionMessage);
             stockDeductionMessage.setOrderId(order.getId());
-            stockDeductionMessage.setOrderNo(order.getOrderNo());
-            stockDeductionMessage.setUserId(order.getUserId());
             stockDeductionMessage.setProductList(productList);
-            stockDeductionMessage.setTotalAmount(order.getTotalAmount());
             
             // 发送消息到RocketMQ
             rocketMQTemplate.sendOneWay("STOCK_DEDUCTION_TOPIC", 
@@ -721,5 +719,76 @@ public class OrderServiceImpl implements OrderService, RocketMQListener<StockDed
             // 重新抛出异常，让RocketMQ重新投递消息
             throw new RuntimeException("库存扣减失败，消息将重新投递", e);
         }
+    }
+    
+    /**
+     * 检查商品限购
+     * @param userId 用户ID
+     * @param productId 商品ID
+     * @param quantity 购买数量
+     * @return 检查结果
+     */
+    private RestResult<LimitPurchaseDO> checkLimitPurchase(Long userId, Long productId, Integer quantity) {
+        // 查询该商品是否有限购配置
+        LimitPurchaseQueryDTO queryDTO = new LimitPurchaseQueryDTO();
+        queryDTO.setProductId(productId);
+        RestResult<LimitPurchaseDO> limitResult = limitPurchaseService.getLimitPurchaseDetail(queryDTO);
+        
+        // 如果没有限购配置，直接返回成功
+        if (!ResultCodeConstant.CODE_000000.equals(limitResult.getCode()) || limitResult.getData() == null) {
+            return new RestResult<>(ResultCodeConstant.CODE_000000, ResultCodeConstant.CODE_000000_MSG, (LimitPurchaseDO) null);
+        }
+        
+        LimitPurchaseDO limitPurchase = limitResult.getData();
+        
+        // 查询用户已购买该商品的数量
+        Integer purchasedQuantity = orderItemMapper.selectPurchasedQuantityByUserAndProduct(userId, productId);
+        
+        // 检查是否超过限购数量
+        if (purchasedQuantity + quantity > limitPurchase.getMaxQuantity()) {
+            int remainingQuantity = limitPurchase.getMaxQuantity() - purchasedQuantity;
+            if (remainingQuantity <= 0) {
+                return new RestResult<>(ResultCodeConstant.CODE_000001, "您已达到该商品的购买上限(" + limitPurchase.getMaxQuantity() + ")");
+            } else {
+                return new RestResult<>(ResultCodeConstant.CODE_000001, "该商品限购" + limitPurchase.getMaxQuantity() + "件，您还可以购买" + remainingQuantity + "件");
+            }
+        }
+        
+        return new RestResult<>(ResultCodeConstant.CODE_000000, ResultCodeConstant.CODE_000000_MSG, limitPurchase);
+    }
+    
+    /**
+     * 检查商品是否有有效的早鸟票价格
+     * @param productId 商品ID
+     * @param regularPrice 商品正常价格
+     * @return 商品价格（早鸟票价格或正常价格）
+     */
+    private BigDecimal checkPreSaleTicketPrice(Long productId, BigDecimal regularPrice) {
+        try {
+            // 构造查询条件
+            cn.sym.dto.PreSaleTicketQueryDTO queryDTO = new cn.sym.dto.PreSaleTicketQueryDTO();
+            queryDTO.setProductId(productId);
+            
+            // 查询早鸟票信息
+            RestResult<PreSaleTicketDO> preSaleResult = preSaleTicketService.getPreSaleTicketDetail(queryDTO);
+            
+            // 如果查询成功且存在早鸟票信息
+            if (ResultCodeConstant.CODE_000000.equals(preSaleResult.getCode()) && preSaleResult.getData() != null) {
+                PreSaleTicketDO preSaleTicket = preSaleResult.getData();
+                Date now = new Date();
+                
+                // 检查当前时间是否在预售时间范围内
+                if (now.after(preSaleTicket.getSaleStartTime()) && now.before(preSaleTicket.getSaleEndTime())) {
+                    log.info("商品[{}]使用早鸟票价格: {}", productId, preSaleTicket.getPrePrice());
+                    return preSaleTicket.getPrePrice();
+                }
+            }
+        } catch (Exception e) {
+            log.error("检查商品[{}]早鸟票价格时发生异常", productId, e);
+        }
+        
+        // 如果没有有效的早鸟票，返回正常价格
+        log.info("商品[{}]使用正常价格: {}", productId, regularPrice);
+        return regularPrice;
     }
 }

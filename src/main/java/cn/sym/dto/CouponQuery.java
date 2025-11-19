@@ -25,4 +25,22 @@ public class CouponQuery {
      */
     @ApiModelProperty(value = "每页条数")
     private Integer pageSize;
+    
+    /**
+     * 优惠券名称
+     */
+    @ApiModelProperty(value = "优惠券名称")
+    private String name;
+    
+    /**
+     * 优惠券状态
+     */
+    @ApiModelProperty(value = "优惠券状态")
+    private Integer status;
+    
+    /**
+     * 优惠券类型
+     */
+    @ApiModelProperty(value = "优惠券类型")
+    private Integer type;
 }

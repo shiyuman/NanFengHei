@@ -5,7 +5,7 @@ import cn.sym.dto.FileDeleteDTO;
 import cn.sym.dto.FileQueryDTO;
 import cn.sym.dto.FileUploadDTO;
 import cn.sym.entity.FileDO;
-import cn.sym.response.RestResult;
+import cn.sym.common.response.RestResult;
 import cn.sym.service.FileService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;

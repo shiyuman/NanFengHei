@@ -18,8 +18,6 @@ import cn.sym.common.response.RestResult;
 import cn.sym.entity.ProductExportTask;
 import cn.sym.service.ProductService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
@@ -40,7 +38,7 @@ import java.nio.charset.StandardCharsets;
 @Slf4j
 @RequiredArgsConstructor
 @RestController
-@Api(tags = "商品管理")
+
 @RequestMapping("/product")
 public class ProductController {
 
@@ -53,7 +51,6 @@ public class ProductController {
      * @return 结果
      */
     @PostMapping("/add")
-    @ApiOperation("新增商品")
     @Idempotent(keyStrategy = IdempotentKeyStrategy.REQUEST_ID)
     public RestResult<Boolean> addProduct(@RequestBody @Valid ProductAddDTO productAddDTO) {
         try {
@@ -75,7 +72,6 @@ public class ProductController {
      * @return 商品详情
      */
     @GetMapping("/detail")
-    @ApiOperation("查询商品详情")
     public RestResult<ProductDO> getProductDetail(@Valid ProductQueryDTO productQueryDTO) {
         try {
             ProductDO result = productService.getProductDetailWithCache(productQueryDTO);
@@ -96,7 +92,6 @@ public class ProductController {
      * @return 商品详情
      */
     @GetMapping("/detail/desensitized")
-    @ApiOperation("查询商品详情（脱敏版本）")
     public DesensitizedRestResult<ProductDO> getProductDetailDesensitized(@Valid ProductQueryDTO productQueryDTO) {
         try {
             ProductDO result = productService.getProductDetailWithCache(productQueryDTO);
@@ -119,7 +114,6 @@ public class ProductController {
      * @return 结果
      */
     @PutMapping("/update")
-    @ApiOperation("修改商品")
     public RestResult<Boolean> updateProduct(@RequestBody @Valid ProductUpdateDTO productUpdateDTO) {
         try {
             Boolean result = productService.updateProductWithCache(productUpdateDTO);
@@ -140,7 +134,6 @@ public class ProductController {
      * @return 结果
      */
     @DeleteMapping("/delete")
-    @ApiOperation("删除商品")
     public RestResult<Boolean> deleteProduct(@RequestBody @Valid ProductDeleteDTO productDeleteDTO) {
         try {
             Boolean result = productService.deleteProductWithCache(productDeleteDTO);
@@ -161,7 +154,6 @@ public class ProductController {
      * @return 结果
      */
     @PostMapping("/cache/warmup")
-    @ApiOperation("预热商品缓存")
     public RestResult<Boolean> warmUpProductCache(@RequestParam Long productId) {
         try {
             productService.warmUpProductCache(productId);
@@ -179,7 +171,6 @@ public class ProductController {
      * @return 结果
      */
     @PutMapping("/status/update")
-    @ApiOperation("商品上下架")
     public RestResult<Boolean> updateProductStatus(@RequestBody @Valid ProductStatusUpdateDTO productStatusUpdateDTO) {
         try {
             Boolean result = productService.updateProductStatus(productStatusUpdateDTO);
@@ -200,7 +191,6 @@ public class ProductController {
      * @return 商品分页结果
      */
     @GetMapping("/list/page")
-    @ApiOperation("分页查询商品列表")
     public RestResult<Page<ProductDO>> getProductList(@Valid ProductPageQueryDTO productPageQueryDTO) {
         try {
             // 检查参数是否包含SQL注入风险
@@ -223,7 +213,6 @@ public class ProductController {
      * @return 任务ID
      */
     @PostMapping("/export/async")
-    @ApiOperation("异步导出商品信息")
     public RestResult<String> exportProductsAsync(@RequestBody ProductExportQueryDTO productExportQueryDTO) {
         try {
             String taskId = productService.exportProductsAsync(productExportQueryDTO);
@@ -241,7 +230,6 @@ public class ProductController {
      * @return 任务状态
      */
     @GetMapping("/export/status")
-    @ApiOperation("查询导出任务状态")
     public RestResult<ProductExportTaskDTO> getExportTaskStatus(@RequestParam String taskId) {
         try {
             ProductExportTaskDTO result = productService.getExportTaskStatus(taskId);
@@ -262,7 +250,6 @@ public class ProductController {
      * @param response HTTP响应对象
      */
     @GetMapping("/export/download")
-    @ApiOperation("下载导出文件")
     public void downloadExportFile(@RequestParam String taskId, HttpServletResponse response) {
         try {
             ProductExportTaskDTO taskDTO = productService.getExportTaskStatus(taskId);

@@ -1,5 +1,7 @@
 package cn.sym.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.TableField;
 import lombok.Data;
 import java.util.Date;
 
@@ -28,6 +30,7 @@ public class ProductExportTask {
     /**
      * 创建时间
      */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private Date createTime;
 
     /**

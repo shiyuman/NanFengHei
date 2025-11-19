@@ -6,11 +6,13 @@ import cn.sym.repository.OrderInfoRepository;
 import cn.sym.common.response.RestResult;
 import cn.sym.service.ExternalCallService;
 import cn.sym.utils.HttpClientUtil;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;
 import java.util.Map;
+
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -22,10 +24,10 @@ import org.springframework.stereotype.Service;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class ExternalCallServiceImpl implements ExternalCallService {
 
-    @Autowired
-    private OrderInfoRepository orderInfoRepository;
+    private final OrderInfoRepository orderInfoRepository;
 
     @Value("${external.payment.url}")
     private String paymentUrl;
@@ -33,8 +35,7 @@ public class ExternalCallServiceImpl implements ExternalCallService {
     @Value("${external.logistics.url}")
     private String logisticsUrl;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
     @Override
     public RestResult<Object> callPaymentGateway(ExternalCallRequestDTO request) {

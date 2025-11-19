@@ -18,14 +18,17 @@ import cn.sym.service.ProductService;
 import cn.sym.common.constant.ResultCodeConstant;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Date;
+import java.util.*;
+
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.springframework.beans.BeanUtils;
 import org.springframework.http.ContentDisposition;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
@@ -35,11 +38,10 @@ import java.io.IOException;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.ss.usermodel.*;
 import java.text.SimpleDateFormat;
-import java.util.List;
+
 import org.springframework.util.CollectionUtils;
 import cn.sym.entity.ProductExportTask;
 import cn.sym.dto.ProductExportTaskDTO;
-import java.util.UUID;
 
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -54,7 +56,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Service
 @RequiredArgsConstructor
 @EnableAsync
-public class ProductServiceImpl implements ProductService {
+public class ProductServiceImpl extends ServiceImpl<ProductMapper, ProductDO> implements ProductService {
     
     private final StringRedisTemplate redisTemplate;
     private final ProductMapper productMapper;
@@ -76,14 +78,8 @@ public class ProductServiceImpl implements ProductService {
 
         // 插入新商品
         ProductDO productDO = new ProductDO();
-        productDO.setName(productAddDTO.getName());
-        productDO.setDescription(productAddDTO.getDescription());
-        productDO.setCategoryId(productAddDTO.getCategoryId());
-        productDO.setPrice(productAddDTO.getPrice());
-        productDO.setStock(productAddDTO.getStock());
-        productDO.setStatus(productAddDTO.getStatus());
-
-        return productMapper.insert(productDO) > 0;
+        BeanUtils.copyProperties(productAddDTO,productDO);
+        return save(productDO);
     }
     
     @Override
@@ -94,18 +90,13 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public Boolean updateProductWithCache(ProductUpdateDTO productUpdateDTO) {
         // 判断商品是否存在
-        ProductDO productDO = productMapper.selectById(productUpdateDTO.getId());
+        ProductDO productDO = getById(productUpdateDTO.getId()); 
         if (productDO == null) {
             throw new BusinessException(ResultCodeConstant.CODE_000001, ResultCodeConstant.CODE_000001_MSG);
         }
 
         // 更新商品信息
-        productDO.setName(productUpdateDTO.getName());
-        productDO.setDescription(productUpdateDTO.getDescription());
-        productDO.setCategoryId(productUpdateDTO.getCategoryId());
-        productDO.setPrice(productUpdateDTO.getPrice());
-        productDO.setStock(productUpdateDTO.getStock());
-        productDO.setStatus(productUpdateDTO.getStatus());
+        BeanUtils.copyProperties(productUpdateDTO,productDO);
         
         // 更新商品并清除缓存
         multiLevelCacheService.updateProductAndClearCache(productDO);
@@ -114,7 +105,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public Boolean deleteProductWithCache(ProductDeleteDTO productDeleteDTO) {
         // 确认商品是否存在
-        ProductDO productDO = productMapper.selectById(productDeleteDTO.getId());
+        ProductDO productDO = getById(productDeleteDTO.getId()); 
         if (productDO == null) {
             throw new BusinessException(ResultCodeConstant.CODE_000001, ResultCodeConstant.CODE_000001_MSG);
         }
@@ -132,7 +123,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public Boolean updateProductStatus(ProductStatusUpdateDTO productStatusUpdateDTO) {
         // 判断商品是否存在
-        ProductDO productDO = productMapper.selectById(productStatusUpdateDTO.getId());
+        ProductDO productDO = getById(productStatusUpdateDTO.getId());
         if (productDO == null) {
             throw new BusinessException(ResultCodeConstant.CODE_000001, ResultCodeConstant.CODE_000001_MSG);
         }
@@ -140,7 +131,7 @@ public class ProductServiceImpl implements ProductService {
         // 更新商品状态
         productDO.setStatus(productStatusUpdateDTO.getStatus());
 
-        return productMapper.updateById(productDO) > 0;
+        return updateById(productDO);
     }
 
     @Override
@@ -173,6 +164,7 @@ public class ProductServiceImpl implements ProductService {
         
         // 根据参数设置排序规则
         if ("create_time".equalsIgnoreCase(productPageQueryDTO.getOrderBy())) {
+            //检查 productPageQueryDTO.getOrderType() 的值是否等于 "desc"，不区分大小写
             if ("desc".equalsIgnoreCase(productPageQueryDTO.getOrderType())) {
                 wrapper.orderByDesc(ProductDO::getCreateTime);
             } else {
@@ -221,19 +213,10 @@ public class ProductServiceImpl implements ProductService {
         while (hasMore) {
             Page<ProductDO> page = new Page<>(current, pageSize);
             LambdaQueryWrapper<ProductDO> wrapper = new LambdaQueryWrapper<>();
-            
-            if(query.getName() != null && !query.getName().isEmpty()){
-                wrapper.like(ProductDO::getName, query.getName());
-            }
-            if(query.getStatus() != null){
-                wrapper.eq(ProductDO::getStatus, query.getStatus());
-            }
-            if (query.getCategoryId() != null) {
-                wrapper.eq(ProductDO::getCategoryId, query.getCategoryId());
-            }
-            
-            // 按创建时间倒序排列
-            wrapper.orderByDesc(ProductDO::getCreateTime);
+            wrapper.like(query.getName() != null && !query.getName().isEmpty(),ProductDO::getName, query.getName())
+                    .eq(query.getStatus() != null,ProductDO::getStatus, query.getStatus())
+                    .eq(query.getCategoryId() != null,ProductDO::getCategoryId, query.getCategoryId())
+                    .orderByDesc(ProductDO::getCreateTime);
             
             Page<ProductDO> productPage = productMapper.selectPage(page, wrapper);
             List<ProductDO> productList = productPage.getRecords();
@@ -462,18 +445,16 @@ public class ProductServiceImpl implements ProductService {
         try {
             for (ProductDO product : products) {
                 // 数据校验
+                Map<String,Object> requiredFields = new HashMap<>();
+                requiredFields.put("商品价格",product.getPrice());
+                requiredFields.put("商品库存",product.getStock());
+                requiredFields.forEach((fieldName,fieldValue)->{
+                    if(fieldValue == null || (fieldValue instanceof Number && ((Number) fieldValue).doubleValue()<0)){
+                        throw new BusinessException(ResultCodeConstant.CODE_000001,fieldName + "不能低于0");
+                    }
+                });
                 if (product.getName() == null || product.getName().trim().isEmpty()) {
                     log.warn("商品名称不能为空");
-                    continue;
-                }
-
-                if (product.getPrice() == null || product.getPrice() < 0) {
-                    log.warn("商品价格不能低于0: {}", product.getPrice());
-                    continue;
-                }
-
-                if (product.getStock() == null || product.getStock() < 0) {
-                    log.warn("商品库存不能低于0: {}", product.getStock());
                     continue;
                 }
 
@@ -481,11 +462,6 @@ public class ProductServiceImpl implements ProductService {
                 if (product.getStatus() == null) {
                     product.setStatus(0); // 默认下架状态
                 }
-
-                product.setCreateBy("system");
-                product.setCreateTime(new Date());
-                product.setUpdateBy("system");
-                product.setUpdateTime(new Date());
 
                 productMapper.insert(product);
             }

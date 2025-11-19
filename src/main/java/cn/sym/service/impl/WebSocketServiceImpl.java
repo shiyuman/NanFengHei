@@ -14,21 +14,21 @@ import cn.sym.repository.UserMapper;
 import cn.sym.service.WebSocketService;
 import cn.sym.utils.SessionUtil;
 import java.util.Date;
-import org.springframework.beans.factory.annotation.Autowired;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class WebSocketServiceImpl implements WebSocketService {
 
-    @Autowired
-    private UserMapper userMapper;
+    private final UserMapper userMapper;
 
-    @Autowired
-    private OrderInfoMapper orderInfoMapper;
+    private final OrderInfoMapper orderInfoMapper;
 
-    @Autowired
-    private ChatMessageMapper chatMessageMapper;
+    private final ChatMessageMapper chatMessageMapper;
 
     @Override
     @Transactional
@@ -73,9 +73,7 @@ public class WebSocketServiceImpl implements WebSocketService {
         }
 
         ChatMessage chatMessage = new ChatMessage();
-        chatMessage.setFromUserId(messageDTO.getFromUserId());
-        chatMessage.setToUserId(messageDTO.getToUserId());
-        chatMessage.setContent(messageDTO.getContent());
+        BeanUtils.copyProperties(messageDTO,chatMessage);
         chatMessage.setCreateTime(new Date());
         chatMessageMapper.insert(chatMessage);
 

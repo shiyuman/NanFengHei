@@ -3,6 +3,8 @@ package cn.sym.service;
 import cn.sym.entity.ProductDO;
 import cn.sym.repository.ProductMapper;
 import com.github.benmanes.caffeine.cache.Cache;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -21,7 +23,8 @@ public class MultiLevelCacheService {
 
     private final ProductMapper productMapper;
 
-    @Qualifier("localCache")
+    //Lombok 不复制 @Qualifier 注解
+//    @Qualifier("localCache")
     private final Cache<String, Object> localCache;
 
     private final StringRedisTemplate redisTemplate;

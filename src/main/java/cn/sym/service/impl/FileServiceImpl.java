@@ -5,14 +5,16 @@ import cn.sym.dto.FileQueryDTO;
 import cn.sym.dto.FileUploadDTO;
 import cn.sym.entity.FileDO;
 import cn.sym.repository.FileMapper;
-import cn.sym.response.RestResult;
-import cn.sym.response.ResultCodeConstant;
+import cn.sym.common.response.RestResult;
+import cn.sym.common.response.ResultCodeConstant;
 import cn.sym.service.FileService;
 import cn.sym.utils.OssUtil;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import java.util.Date;
+
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -22,15 +24,13 @@ import org.springframework.stereotype.Service;
  */
 @Slf4j
 @Service
-public class FileServiceImpl implements FileService {
+@RequiredArgsConstructor
+public class FileServiceImpl extends ServiceImpl<FileMapper,FileDO>  implements FileService {
 
     private static final long MAX_FILE_SIZE = 50 * 1024 * 1024; // 最大文件大小为50MB
 
-    @Autowired
-    private FileMapper fileMapper;
-
-    @Autowired
-    private OssUtil ossUtil;
+    private final FileMapper fileMapper;
+    private final OssUtil ossUtil;
 
     @Override
     public RestResult<Boolean> uploadFile(FileUploadDTO dto) {
@@ -77,8 +77,8 @@ public class FileServiceImpl implements FileService {
     public RestResult<Boolean> deleteFile(FileDeleteDTO dto) {
         try {
             // 根据ID查询文件记录是否存在
-            QueryWrapper<FileDO> wrapper = new QueryWrapper<>();
-            wrapper.eq("id", dto.getId());
+            LambdaQueryWrapper<FileDO> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(FileDO::getId, dto.getId());
             FileDO fileDO = fileMapper.selectOne(wrapper);
             if (fileDO == null) {
                 return new RestResult<>(ResultCodeConstant.CODE_000001, "文件记录不存在");
@@ -107,8 +107,8 @@ public class FileServiceImpl implements FileService {
     public RestResult<FileDO> queryFileInfo(FileQueryDTO dto) {
         try {
             // 根据ID查询文件记录是否存在
-            QueryWrapper<FileDO> wrapper = new QueryWrapper<>();
-            wrapper.eq("id", dto.getId());
+            LambdaQueryWrapper<FileDO> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(FileDO::getId, dto.getId());
             FileDO fileDO = fileMapper.selectOne(wrapper);
             if (fileDO == null) {
                 return new RestResult<>(ResultCodeConstant.CODE_000001, "文件记录不存在");

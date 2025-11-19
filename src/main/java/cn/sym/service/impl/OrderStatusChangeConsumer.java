@@ -1,6 +1,8 @@
 package cn.sym.service.impl;
 
 import cn.sym.dto.OrderStatusChangeDTO;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
 import org.apache.rocketmq.spring.core.RocketMQListener;
@@ -18,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 @Component
 @RocketMQMessageListener(topic = "order-status-change-topic", 
                         consumerGroup = "order-status-change-consumer-group")
+@RequiredArgsConstructor
 public class OrderStatusChangeConsumer implements RocketMQListener<OrderStatusChangeDTO> {
     
     private final OrderMapper orderMapper;
@@ -25,12 +28,6 @@ public class OrderStatusChangeConsumer implements RocketMQListener<OrderStatusCh
     private final StringRedisTemplate redisTemplate;
     
     private final SimpMessagingTemplate messagingTemplate;
-
-    public OrderStatusChangeConsumer(OrderMapper orderMapper, StringRedisTemplate redisTemplate, SimpMessagingTemplate messagingTemplate) {
-        this.orderMapper = orderMapper;
-        this.redisTemplate = redisTemplate;
-        this.messagingTemplate = messagingTemplate;
-    }
 
     @Override
     public void onMessage(OrderStatusChangeDTO message) {

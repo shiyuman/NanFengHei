@@ -4,13 +4,13 @@ import cn.sym.dto.LimitPurchaseAddDTO;
 import cn.sym.dto.LimitPurchaseEditDTO;
 import cn.sym.dto.LimitPurchaseQueryDTO;
 import cn.sym.entity.LimitPurchaseDO;
-import cn.sym.response.RestResult;
+import cn.sym.common.response.RestResult;
 import cn.sym.service.LimitPurchaseService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+
 import javax.validation.Valid;
+
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -19,13 +19,12 @@ import org.springframework.web.bind.annotation.*;
  * @author user
  */
 @Slf4j
-@Api("限购配置管理")
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/limit-purchase")
 public class LimitPurchaseController {
 
-    @Autowired
-    private LimitPurchaseService limitPurchaseService;
+    private final LimitPurchaseService limitPurchaseService;
 
     /**
      * 新增限购配置
@@ -34,7 +33,6 @@ public class LimitPurchaseController {
      * @return RestResult 结果
      */
     @PostMapping("/add")
-    @ApiOperation("新增限购配置")
     public RestResult<Boolean> addLimitPurchase(@RequestBody @Valid LimitPurchaseAddDTO addDTO) {
         return limitPurchaseService.addLimitPurchase(addDTO);
     }
@@ -46,7 +44,6 @@ public class LimitPurchaseController {
      * @return RestResult 结果
      */
     @PutMapping("/edit")
-    @ApiOperation("编辑限购配置")
     public RestResult<Boolean> editLimitPurchase(@RequestBody @Valid LimitPurchaseEditDTO editDTO) {
         return limitPurchaseService.editLimitPurchase(editDTO);
     }
@@ -58,7 +55,6 @@ public class LimitPurchaseController {
      * @return RestResult 结果
      */
     @GetMapping("/detail")
-    @ApiOperation("查询限购配置详情")
     public RestResult<LimitPurchaseDO> getLimitPurchaseDetail(@Valid LimitPurchaseQueryDTO queryDTO) {
         return limitPurchaseService.getLimitPurchaseDetail(queryDTO);
     }

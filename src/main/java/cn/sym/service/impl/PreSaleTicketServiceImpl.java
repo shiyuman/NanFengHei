@@ -4,17 +4,16 @@ import cn.sym.dto.PreSaleTicketAddDTO;
 import cn.sym.dto.PreSaleTicketEditDTO;
 import cn.sym.dto.PreSaleTicketQueryDTO;
 import cn.sym.entity.PreSaleTicketDO;
-import cn.sym.entity.ProductInfoDO;
-import cn.sym.exception.BusinessException;
+import cn.sym.entity.ProductDO;
+import cn.sym.common.exception.BusinessException;
 import cn.sym.repository.PreSaleTicketMapper;
-import cn.sym.repository.ProductInfoMapper;
-import cn.sym.response.RestResult;
-import cn.sym.response.ResultCodeConstant;
+import cn.sym.repository.ProductMapper;
+import cn.sym.common.response.RestResult;
+import cn.sym.common.response.ResultCodeConstant;
 import cn.sym.service.PreSaleTicketService;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import java.util.Date;
-import javax.annotation.Resource;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -27,21 +26,20 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Slf4j
 @Service
-public class PreSaleTicketServiceImpl extends ServiceImpl<PreSaleTicketMapper, PreSaleTicketDO> implements PreSaleTicketService {
+@RequiredArgsConstructor
+public class PreSaleTicketServiceImpl implements PreSaleTicketService {
 
-    @Resource
-    private ProductInfoMapper productInfoMapper;
+    private final ProductMapper productMapper;
 
-    @Resource
-    private PreSaleTicketMapper preSaleTicketMapper;
+    private final PreSaleTicketMapper preSaleTicketMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public RestResult<Boolean> addPreSaleTicket(PreSaleTicketAddDTO addDTO) {
         // 校验商品是否存在
-        QueryWrapper<ProductInfoDO> productQuery = new QueryWrapper<>();
-        productQuery.eq("id", addDTO.getProductId());
-        ProductInfoDO product = productInfoMapper.selectOne(productQuery);
+        LambdaQueryWrapper<ProductDO> productQuery = new LambdaQueryWrapper<>();
+        productQuery.eq(ProductDO::getId, addDTO.getProductId());
+        ProductDO product = productMapper.selectOne(productQuery);
         if (product == null) {
             return new RestResult<>(ResultCodeConstant.CODE_000001, ResultCodeConstant.CODE_000001_MSG, false);
         }
@@ -51,15 +49,10 @@ public class PreSaleTicketServiceImpl extends ServiceImpl<PreSaleTicketMapper, P
             return new RestResult<>(ResultCodeConstant.CODE_000001, "预售时间不合法", false);
         }
 
-        // 构造DO对象并保存
         PreSaleTicketDO preSaleTicketDO = new PreSaleTicketDO();
         BeanUtils.copyProperties(addDTO, preSaleTicketDO);
-        preSaleTicketDO.setCreateBy("admin");
-        preSaleTicketDO.setCreateTime(new Date());
-        preSaleTicketDO.setUpdateBy("admin");
-        preSaleTicketDO.setUpdateTime(new Date());
 
-        boolean result = save(preSaleTicketDO);
+        boolean result = preSaleTicketMapper.insert(preSaleTicketDO) > 0;
         if (!result) {
             throw new BusinessException(ResultCodeConstant.CODE_000002, ResultCodeConstant.CODE_000002_MSG);
         }
@@ -70,7 +63,7 @@ public class PreSaleTicketServiceImpl extends ServiceImpl<PreSaleTicketMapper, P
     @Transactional(rollbackFor = Exception.class)
     public RestResult<Boolean> editPreSaleTicket(PreSaleTicketEditDTO editDTO) {
         // 校验早鸟票预售配置是否存在
-        PreSaleTicketDO existingPreSaleTicket = getById(editDTO.getId());
+        PreSaleTicketDO existingPreSaleTicket = preSaleTicketMapper.selectById(editDTO.getId());
         if (existingPreSaleTicket == null) {
             return new RestResult<>(ResultCodeConstant.CODE_000001, "早鸟票配置不存在", false);
         }
@@ -84,10 +77,8 @@ public class PreSaleTicketServiceImpl extends ServiceImpl<PreSaleTicketMapper, P
         PreSaleTicketDO preSaleTicketDO = new PreSaleTicketDO();
         BeanUtils.copyProperties(editDTO, preSaleTicketDO);
         preSaleTicketDO.setId(editDTO.getId());
-        preSaleTicketDO.setUpdateBy("admin");
-        preSaleTicketDO.setUpdateTime(new Date());
 
-        boolean result = updateById(preSaleTicketDO);
+        boolean result = preSaleTicketMapper.updateById(preSaleTicketDO) > 0;
         if (!result) {
             throw new BusinessException(ResultCodeConstant.CODE_000002, ResultCodeConstant.CODE_000002_MSG);
         }
@@ -97,8 +88,8 @@ public class PreSaleTicketServiceImpl extends ServiceImpl<PreSaleTicketMapper, P
     @Override
     public RestResult<PreSaleTicketDO> getPreSaleTicketDetail(PreSaleTicketQueryDTO queryDTO) {
         // 根据商品ID查询早鸟票预售配置信息
-        QueryWrapper<PreSaleTicketDO> wrapper = new QueryWrapper<>();
-        wrapper.eq("product_id", queryDTO.getProductId());
+        LambdaQueryWrapper<PreSaleTicketDO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(PreSaleTicketDO::getProductId, queryDTO.getProductId());
         PreSaleTicketDO preSaleTicketDO = preSaleTicketMapper.selectOne(wrapper);
         if (preSaleTicketDO == null) {
             return new RestResult<>(ResultCodeConstant.CODE_000001, "未找到该商品的早鸟票预售配置", null);
