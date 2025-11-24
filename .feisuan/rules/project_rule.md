@@ -64,7 +64,7 @@ NanFengHei
 |-------------|----------------------------------|----------------------------------------------------------------|
 | **Controller** | 处理 HTTP 请求与响应，定义 API 接口 | 不得直接访问数据库，必须通过 Service 层调用                  |
 | **Service**    | 实现业务逻辑、事务管理与数据校验   | 必须通过 Repository 或 Mapper 访问数据库；返回 DTO 而非 Entity（除非必要） |
-| **Repository** | 数据库访问与持久化操作             | 继承 `JpaRepository` 或使用 MyBatis Mapper；避免 N+1 查询问题     |
+| **Repository** | 数据库访问与持久化操作             | 使用 MyBatis Mapper；避免 N+1 查询问题     |
 | **Entity**     | 映射数据库表结构                   | 不得直接返回给前端（需转换为 DTO）；包名统一为 `entity`         |
 
 ### 接口与实现分离

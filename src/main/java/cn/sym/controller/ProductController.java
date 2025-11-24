@@ -38,7 +38,6 @@ import java.nio.charset.StandardCharsets;
 @Slf4j
 @RequiredArgsConstructor
 @RestController
-
 @RequestMapping("/product")
 public class ProductController {
 
@@ -213,7 +212,7 @@ public class ProductController {
      * @return 任务ID
      */
     @PostMapping("/export/async")
-    public RestResult<String> exportProductsAsync(@RequestBody ProductExportQueryDTO productExportQueryDTO) {
+    public RestResult<String> exportProductsAsync(@RequestBody @Valid ProductExportQueryDTO productExportQueryDTO) {
         try {
             String taskId = productService.exportProductsAsync(productExportQueryDTO);
             return new RestResult<>("000000", "调用成功", taskId);

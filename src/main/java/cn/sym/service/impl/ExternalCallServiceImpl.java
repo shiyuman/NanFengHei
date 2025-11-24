@@ -41,7 +41,7 @@ public class ExternalCallServiceImpl implements ExternalCallService {
     public RestResult<Object> callPaymentGateway(ExternalCallRequestDTO request) {
         try {
             // 查询订单是否存在
-            OrderInfo orderInfo = orderInfoRepository.findById(request.getOrderId()).orElse(null);
+            OrderInfo orderInfo = orderInfoRepository.selectById(request.getOrderId());
             if (orderInfo == null) {
                 return new RestResult<>("000001", "订单信息不存在");
             }

@@ -1,7 +1,8 @@
 package cn.sym.repository;
 
 import cn.sym.entity.OrderInfo;
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Mapper;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Repository;
  * </p>
  * @author user
  */
+@Mapper
 @Repository
-public interface OrderInfoRepository extends JpaRepository<OrderInfo, Long> {
+public interface OrderInfoRepository extends BaseMapper<OrderInfo> {
 }

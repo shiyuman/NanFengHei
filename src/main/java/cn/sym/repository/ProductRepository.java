@@ -1,7 +1,10 @@
 package cn.sym.repository;
 
 import cn.sym.entity.ProductDO;
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -9,8 +12,9 @@ import org.springframework.stereotype.Repository;
  * 
  * @author user
  */
+@Mapper
 @Repository
-public interface ProductRepository extends JpaRepository<ProductDO, Long> {
+public interface ProductRepository extends BaseMapper<ProductDO> {
     
     /**
      * 根据商品ID和状态查询商品
@@ -18,5 +22,6 @@ public interface ProductRepository extends JpaRepository<ProductDO, Long> {
      * @param status 状态
      * @return 商品对象
      */
-    ProductDO findByIdAndStatus(Long id, Integer status);
+    @Select("SELECT * FROM product_info WHERE id = #{id} AND status = #{status}")
+    ProductDO findByIdAndStatus(@Param("id") Long id, @Param("status") Integer status);
 }
