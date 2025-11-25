@@ -4,90 +4,61 @@
 
 ## 用户管理 JWT
 ------------------------
-## 商品管理
+## 商品管理 POI | 判空 | MetaObjectHandler | 乐观锁
 支持商品的上架、下架、分类管理及库存控制，满足商品信息维护和展示需求。  
 ### 1. Apache POI库  
-   解决在 Java 程序中读写 Microsoft Office 格式文件的问题  
+   解决在 Java 程序中读写 Microsoft Office文件的问题  
    HSSF  → XSSF  →  SXSSF   
-   处理旧版的 Excel 文件 → 处理新版的 Excel 文件 → 流式扩展，用于解决在生成海量数据 Excel 时OOM
-
-内存消耗巨大：
-HSSF 和 XSSF 采用的是基于 DOM 的解析模型，需要将整个文件加载到内存中构建成一个对象树。   
-为了解决OOM，POI 提供了 SXSSF。  
-它是一个基于流的写入 API，只在内存中保留一个固定大小的行（滑动窗口），当行数超过这个窗口时，就会将最旧的行数据刷到磁盘的临时文件中，从而大大降低了内存占用。但 SXSSF 主要是为写入设计的，读取大文件仍然是个难题。   
-
-一个非常优秀的替代方案是阿里巴巴开源的 EasyExcel。   
-内存优化：底层对 POI 进行了封装，读取和写入都采用基于 SAX 的流式解析，内存占用极低，可以轻松处理百万级别的数据。   
-API 设计简洁：通过注解（Annotation）将 Java 对象（POJO）与 Excel 的行数据直接映射，代码量大大减少。
-
-POI工作流程：  
-1.创建工作簿和工作表：Workbook→sheet→cell
-```java
-Workbook workbook = new XSSFWorkbook();
-Sheet sheet = workbook.createSheet("商品数据");
-```
-首先创建了一个新的Excel工作簿（`Workbook`），然后在其中创建了一个名为“商品数据”的工作表（`Sheet`）。  
-`XSSFWorkbook`是Apache POI库中用于处理.xlsx格式文件的类。
-WorkbookFactory.create() 方法的优势在于可以根据输入流自动识别 Excel 文件的格式（.xls还是.xlsx），并创建相应的工作簿对象。而目前代码中直接使用 new XSSFWorkbook() 的方式只能处理 .xlsx 格式的文件。
-```java
-// 从输入流创建Workbook（适用于读取现有Excel文件）
-Workbook workbook = WorkbookFactory.create(inputStream);
-
-// 创建新的空Workbook（适用于创建新的Excel文件）
-Workbook workbook = WorkbookFactory.create(true);
-```
-
-2.设置列标题行：
-```
-    Row headerRow = sheet.createRow(0);   
-    headerRow.createCell(0).setCellValue("商品ID");   
-```
-在工作表的第一行（即索引为0的行）创建了一个标题行（`Row headerRow`），并在该行的各个单元格（`Cell`）中分别设置了列标题
-
-3.创建日期格式化对象：
-
-    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");   
-
-若不格式化，则在Excel表格中显示的创建时间会是原始的Date对象toString()，通常是类似"Mon Nov 03 15:
-30:45 CST 2025"，而不是"2025-11-03 15:30:45"
-
-4.填充商品数据
-
-5.设置HTTP响应头：
-
-1. `response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");`  
-   设置响应的内容类型为Excel文件格式（xlsx）。浏览器会根据这个MIME类型识别这是一个Excel文件。
-
-2. `ContentDisposition contentDisposition = ContentDisposition.attachment()
-        .filename("商品数据.xlsx", StandardCharsets.UTF_8)
-        .build();`  
-   使用Spring框架的ContentDisposition工具类创建了一个附件类型的Content-Disposition头部信息，并指定了文件名为"
-   商品数据.xlsx"，同时使用UTF-8字符集编码以支持中文文件名。
-
-3. `response.setHeader("Content-Disposition", contentDisposition.toString());`  
-   将上面构建好的Content-Disposition对象转换成字符串并设置到HTTP响应头中。这告诉浏览器应该将响应内容作为附件下载，并提示默认文件名。
-
-4. `workbook.write(response.getOutputStream());`  
-   将Apache POI创建的Excel工作簿直接写入HTTP响应的输出流中，这样客户端就可以接收到完整的Excel文件内容。
-
-整个过程就是：
+   处理旧版的 Excel 文件.xls  → 处理新版的 Excel 文件.xlsx → 流式扩展，用于解决在生成海量数据 Excel 时OOM  
+   
+设置http响应头的过程就是：
 - 告诉浏览器返回的是一个Excel文件
 - 告诉浏览器应该如何处理这个文件（作为附件下载）
 - 把实际的Excel文件内容发送给浏览器
 
+面试官: SXSSF的原理是什么？它有没有什么局限性？   
+求职者: “滑动窗口”+“空间换时间”。它在内存中维持一个固定大小的行对象窗口。当程序写入新行时：  
+如果窗口未满，新行直接在内存中创建。   
+如果窗口已满，SXSSF 会将窗口中最旧的行数据从内存中移除，并将其以压缩的 XML 格式写入到磁盘上的一个临时文件中。  
+最后，整个工作簿写完时，SXSSF 会将内存中的剩余行和磁盘上的所有临时文件合并，生成最终的 .xlsx 文件。   
+局限性：只读前向访问。因为旧数据一旦进磁盘，就无法再从内存中访问和修改了。所以 SXSSF 几乎是为了一次性、顺序写入海量数据而设计的，不适合需要频繁回头修改已写入行的复杂场景。另外，它主要是为**写入**设计的，对于**读取**超大 Excel 文件，它仍然无能为力。
+
+面试官: 那读取一个包含百万行数据的 Excel 文件，你会怎么做？ 
+求职者: 对于读取百万级数据的场景，我不会选择 POI 的标准 API，而是会使用阿里巴巴开源的 EasyExcel。   
+主要原因如下：   
+底层解析模型不同：  
+POI在读取时用 DOM 解析模型，会一次性将整个 Excel 文件的所有内容加载到内存中，构建成一个完整的对象树。数据量一大必然OOM。  
+EasyExcel 底层对 POI 进行了封装，它在读取和写入时都采用了 SAX 解析模型。SAX 是基于事件驱动的流式解析，它会逐行读取文件，每读取到一行数据，就会触发一个事件（回调），我们可以在这个回调中处理当前行的数据，处理完后这行数据就可以被垃圾回收。这样，任何时候内存中都只有少量的数据，从而实现了极低的内存占用，可以轻松处理百万甚至千万级别的数据。   
+API 简洁： EasyExcel 的 API 设计非常友好，通过注解（@ExcelProperty）就能将 Excel 的列和 Java 对象（POJO）的字段自动映射
+
+面试官: 日志显示 OOM 发生在 Excel 导出的模块。如果让你来排查和优化这个问题，你的思路是什么？ 
+求职者: 
+
+代码审查（定位问题）:  
+首先，我会检查导出模块的代码，确认当前使用的是 POI 的哪个 API。大概率是直接使用了 XSSF
+其次，我会检查数据查询部分。是不是一次性从数据库查询了所有数据到内存中
+
+优化方案（分阶段实施）:  
+紧急修复（治标）： 立刻将 Excel 生成部分的代码从 XSSF 切换到 SXSSF。同时，设置一个合理的滑动窗口大小，比如 100   
+
+数据源优化（治本）： 优化数据库查询逻辑。避免一次性 select * 全量数据。可以采用 流式查询（比如 MySQL 的 statement.setFetchSize(Integer.MIN_VALUE)）或者 分页查询 的方式，每次只从数据库取一部分数据，处理完写入 Excel 后，再去取下一部分   
+
+架构重构（长期方案）：   
+可以考虑引入 EasyExcel 全面替代 POI 的实现  
+对于耗时很长的导出任务，应该改造成**异步任务**。用户点击导出后，后端生成一个任务，立即返回一个“任务已提交，请稍后到下载中心查看”的提示。然后由后台线程池或消息队列来处理这个耗时的导出任务，完成后再通知用户下载。这样可以极大提升用户体验，并避免长时间占用 Web 服务器的线程资源。
 ### 2. 各种判空方式的总结对比：   
 空：假设有个盒子   
 null:无盒子。一个变量没有指向任何内存地址  
 ""/Empty:有盒子，但无东西。长度=0的字符串  
-" "/Blank:有盒子又透明东西。含空格、Tab键、换行符的字符串   
+" "/Blank:有盒子有透明东西。含空格、Tab键、换行符的字符串   
 判空：   
-a. null检查  
+A. null检查  
 == null / != null 最原始  
 Objects.isNull() / Objects.nonNull() [java8+]  上面的优雅版，可读性更强   
-b. 字符串内容检查，前提是有盒子(非null)  
-isEmpty（） 只在乎长度是否为0，就算有透明填充物也算”非空“   
-trim().isEmpty()  先去除透明填充物再判空，效果=Blank但效率低，因为可能创建新字符串对象，且只能去除前后空格   
-isBlank()[java11+] 就算有透明填充物也算空(毕竟语义上翻译为空白)  
+B. 字符串内容检查，前提是有盒子(非null)  
+isEmpty（） 只在乎长度是否为0，就算有透明填充物也算”非空“---严格Empty   
+trim().isEmpty()  先去除透明填充物再判空，效果=Blank但效率低，因为可能创建新字符串对象，不利于垃圾回收，且只能去除前后空格   
+isBlank()[java11+] 就算有透明填充物也算空(毕竟语义上翻译为空白) 
 
 最好办法：  
 a. (要求java11+)
@@ -95,61 +66,39 @@ a. (要求java11+)
 username == null || username.isBlank()
 ```
 b. Apache Commons Lang 的 StringUtils [ null-safe（你不需要自己先判断 null）]
-```
-// 需要引入 commons-lang3 依赖
-import org.apache.commons.lang3.StringUtils;
-
-// 检查 null, empty ("")
-if (StringUtils.isEmpty(username)) {
-    System.out.println("用户名为空！");
-}
-
-// 检查 null, empty (""), blank ("   ") (最常用)
-if (StringUtils.isBlank(username)) {
-    System.out.println("用户名无效！");
-}
-```
-
 ### 3. MetaObjectHandler自动填充创建时间和更新时间等字段
+MetaObjectHandler是MP提供的元数据对象处理器，用于自动处理字段的填充操作，无需在业务代码中手动设置创建时间、更新时间等公共字段。
 
-MetaObjectHandler是MyBatis Plus提供的元数据对象处理器，用于自动处理字段的填充操作，无需在业务代码中手动设置创建时间、更新时间等公共字段。
-
-a. 给要填充的字段加Annotation:@TableField(fill = FieldFill.INSERT/UPDATE)  
+a. 给要填充的字段加Annotation:  @TableField(fill = FieldFill.INSERT/UPDATE)  
 b. 实现 MetaObjectHandler 接口，并告诉它具体的填充规则
+c. 加@Component，MP的自动配置机制会自动检测到这个bean并使其生效
 ```    
-//非null才更新
 @Component
 public void insertFill(MetaObject metaObject) {
    //参数分别是：通用对象(反射赋值)，要填充的字段名，字段的数据类型(消除方法重载 (Overloading) 的歧义)，具体的值
    this.strictInsertFill(metaObject, "createTime", Date.class, new Date());
  }    
 ```
-c. 加@Component，MP的自动配置机制会自动检测到这个bean并使其生效
-
 ### 4. 添加乐观锁机制防止并发更新冲突
-
 乐观锁是一种并发控制机制，假设数据一般不会发生冲突，只在提交更新时检查是否违反了并发控制规则。
 
 乐观锁的实现主要有三种主流方式：  
-版本号机制 (Versioning)：最常用、最可靠的方式。  
-时间戳机制 (Timestamping)：一种变体，利用时间戳判断。  
+版本号机制 ：最常用、可靠  
+时间戳机制 ：版本号的一种变体
 CAS (Compare-And-Swap)：这更多是思想层面的体现，版本号和时间戳机制都是其在数据库领域的具体应用。
 
 1. 版本号机制 (Versioning)  
-这是实现乐观锁的黄金标准，也是最推荐的方式。   
-
-MyBatis Plus通过version字段实现乐观锁机制。
+MP通过version字段实现乐观锁机制。
 - 在实体类中的version 字段上添加@Version注解
-- 在 MyBatis-Plus 的配置类中注册 OptimisticLockerInnerInterceptor
-- 更新数据时会自动在SQL中添加version条件，确保只有version匹配时才能更新成功；如果更新影响行数为0，则说明版本已变化，抛出异常。
+- 在 MyBatis-Plus 的配置类中注册 OptimisticLockerInnerInterceptor乐观锁插件
+- 更新数据时会自动在SQL中添加version条件，确保只有version匹配时才能更新成功；如果更新影响行数为0，则说明版本已变化，抛出异常。  
 
-业务代码：正常进行更新即可，MyBatis-Plus 会自动处理 version 的比对和自增。
+配置完后    正常进行更新即可，MP会自动处理 version 的比对和自增。
 
-2. 时间戳机制 (Timestamping)
+2. 时间戳机制 (Timestamping)  
 
 逻辑上与版本号相似，但使用时间戳字段。
-
-优缺点分析   
+  
 优点：  
 字段本身具有业务含义，可以直接看出数据的最后修改时间。   
 无需在应用层手动管理 version 的自增。   
@@ -173,10 +122,12 @@ CAS 是一种底层的原子操作，它包含三个操作数：内存位置（V
 避免了悲观锁独占对象的现象，提高了并发能力，读可以并发   
 
 缺点
-1. 乐观锁只能保证一个共享变量的原子操作，互斥锁可以控制多个。乐观锁本身只对单次 UPDATE 的单行数据生效，无法原生保证跨多行或多表的业务原子性。
+1. 乐观锁只能保证一个共享变量的原子操作，互斥锁可以控制多个。   
+比如银行转账，A账户扣钱和B账户加钱必须是原子操作。  
+对于这种需要保证多个操作一致性的场景，我们必须使用 数据库事务，并可能需要配合悲观锁来确保整个转账过程的原子性和隔离性。
 2. 长时间自旋导致开销大
-3. ABA问题，CAS比较内存值和预期值是否一致，可能是A→B→A了，A可以是对象中的某个属性，但是在ABA过程中其他属性变了，会被CAS认为没有改变。要解决，需加一个版本号(Version)
-### 5. 实现逻辑删除而非物理删除
+3. ABA问题，CAS比较内存值和预期值是否一致，可能是A→B→A了，A可以是对象中的某个属性，会被CAS认为没有改变。要解决，需加一个版本号，因为是单向递增的
+### 5. 实现逻辑删除
 1. 手动实现逻辑删除的痛点   
 查询和更新都必须手动加上 WHERE deleted = 0   
 DELETE 操作都必须被改成 UPDATE 操作
@@ -196,13 +147,11 @@ logic-delete-field: deleted # 全局逻辑删除的实体字段名
 logic-delete-value: 1       # 逻辑已删除值(默认为 1)
 logic-not-delete-value: 0   # 逻辑未删除值(默认为 0)
 ```
-logic-delete-field: 如果你的实体类中逻辑删除字段不叫 deleted，比如叫 is_deleted，那么你可以在这里全局指定。
-
-@TableLogic vs application.yml   
-特殊>一般，若所有逻辑字段名一样，只需app即可；若有特例就用@TableLogic
+application.yml 中的配置是 全局默认值。如果项目里所有的表都遵循同一套逻辑删除规则，那么只需要配置 yml 文件就够了，实体类里甚至可以省略 @TableLogic 注解（如果字段名和全局配置一致）。   
+@TableLogic 注解则是 针对特定实体类的特殊配置。如果某个实体类的逻辑删除字段名或者值的定义与全局配置不同，那么就可以在这个实体类的字段上使用 @TableLogic 来覆盖全局配置，实现特例化处理。
 
 C. 第三步：SQL 的自动改写  
-插入操作 (INSERT) INSERT 操作不受影响，MyBatis-Plus 会使用你在实体类中为 deleted 字段设置的默认值（或全局配置的未删除值 logic-not-delete-value）进行插入。
+MP会使用你在实体类中为 deleted 字段设置的默认值（或全局配置的未删除值 logic-not-delete-value）进行插入。
 
 4. 注意事项   
 
