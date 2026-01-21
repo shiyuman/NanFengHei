@@ -6,25 +6,6 @@
 ------------------------
 ## 商品管理   POI | 判空 | MetaObjectHandler | 乐观锁 | 逻辑删除 | MP插件 | Lombok | @Data | ORM
 支持商品的上架、下架、分类管理及库存控制，满足商品信息维护和展示需求。 
-
-导出几十万数据还是很慢，怎么进一步优化？（系统设计视角）
-1. 源头优化（数据库层）
-   流式查询 (Stream Query)：
-   MySQL 驱动黑科技：stmt.setFetchSize(Integer.MIN_VALUE)。
-   防御性回答：开启流式查询后，必须快速消费。如果 Java 这边写 Excel 慢，会导致数据库连接（Connection）一直被占用。如果并发高，连接池几秒钟就被耗尽了。
-   解决：如果写入逻辑耗时，建议还是用传统的“ID 范围切分”或“Limit 分页”，虽然慢点，但不会拖死数据库。
-2. 过程优化（应用层）
-   批量落盘：EasyExcel 读取时，不要读一行插一行数据库。要在 Listener 里设置一个 BATCH_COUNT = 1000，攒够 1000 条，做一次 batchInsert，然后清空 List。
-   多线程并发写入（Sheet 维度）：
-   如果是写入同一个 Sheet，无法多线程（文件流是顺序的）。
-   但如果是多个 Sheet（比如按月份导出），可以开线程池，每个线程负责查一个月的数据并写入对应的 Sheet，最后合并。
-3. 体验优化（异步化）
-   转异步 + 进度条：
-   用户点击导出 -> 返回 task_id。
-   前端每 3 秒轮询 status (导出中/已完成/下载链接)。
-   后端异步生成文件上传到 OSS，生成下载链接。
-   降级方案 (CSV)：
-   如果数据量真的到了千万级，直接告诉产品经理：“Excel 承载不了，我给你导 CSV 或者 TXT”。CSV 本质是纯文本，没有样式开销，写起来飞快。
 ### 2. 各种判空方式的总结对比：
 null:无盒子。一个变量没有指向任何内存地址  
 ""/Empty:有盒子，但无东西。长度=0的字符串  
@@ -73,9 +54,7 @@ return Optional.ofNullable(user)
    Q: 如果我在一个 @Async 的异步线程中执行插入操作，自动填充的 UserID 会怎样？
       会丢失（或报错）。因为 ThreadLocal 是线程隔离的，子线程（异步线程）无法读取主线程 ThreadLocal 中的数据。
    解决方案：
-       手动传递：在调用异步方法前，把 userId 传进去（笨办法）。
-       InheritableThreadLocal：JDK 自带的，允许子线程继承父线程变量（仅限 new Thread 时）。
-       TTL (TransmittableThreadLocal)：阿里开源的方案。推荐回答。在使用线程池时，它能保证父子线程、不同线程间的 Context 传递。
+       TTL (TransmittableThreadLocal)：阿里开源的方案。在使用线程池时，它能保证父子线程、不同线程间的 Context 传递。
 2. 关于 update_time 的一个隐蔽坑
    Q: 如果我执行 update(null, updateWrapper)，自动填充会生效吗？
       不会。因为没有实体对象，MP 只有 Wrapper 里的 SQL 片段，无法通过反射填充。
@@ -223,8 +202,8 @@ Q2:关联数据的逻辑删除（Cascade Deletion）
    超管特权：
    "当超级管理员需要跨租户统计数据时，我会利用 ThreadLocal 传递一个 flag，在拦截器的 ignoreTable 逻辑中判断：如果当前是超管且带有 flag，则跳过拼接待租户条件。"
 3. 动态表名 (DynamicTableName) —— 内存泄漏陷阱
-   "这个插件常用于分表场景（如按年分表 order_2023）。因为它依赖 ThreadLocal 传递表名后缀，所以必须在 finally 块中调用 ThreadLocal.remove()。
-   否则在 Tomcat 线程池环境下，线程被复用时，上一个请求的表名可能会‘污染’下一个请求，导致把 2024 年的数据写到 2023 年的表里，这是非常可怕的 Bug。"
+   这个插件常用于分表场景（如按年分表 order_2023）。因为它依赖 ThreadLocal 传递表名后缀，所以必须在 finally 块中调用 ThreadLocal.remove()。
+   否则在 Tomcat 线程池环境下，线程被复用时，上一个请求的表名可能会‘污染’下一个请求。
 4. 防全表更新与删除插件 (IllegalSqlInnerInterceptor)  
 工作原理：在 SQL 执行前，该插件会解析即将执行的 UPDATE 和 DELETE 语句。如果发现语句中缺少 WHERE 子句，它会直接抛出异常，从而阻止这条危险的 SQL 执行。
 
